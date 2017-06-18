@@ -35,7 +35,7 @@ object Test {
     .build
 }
 
-object Main extends js.JSApp {
+object JsMain extends js.JSApp {
   LoggerConfig.factory = PrintLoggerFactory()
 
   def main(): Unit = {

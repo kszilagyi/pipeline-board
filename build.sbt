@@ -88,3 +88,5 @@ lazy val ReleaseCmd = Command.command("release") {
 
 // loads the Play server project at sbt startup
 onLoad in Global := (Command.process("project server", _: State)) compose (onLoad in Global).value
+
+wartremoverErrors ++= Warts.all

@@ -1,6 +1,7 @@
 import sbt._
 import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport._
 import play.sbt.PlayImport.guice
+import play.sbt.PlayImport.ws
 
 object Settings {
   val name = "multi-ci-dashboard"
@@ -85,7 +86,7 @@ object Settings {
     "org.webjars" % "font-awesome" % "4.7.0" % Provided,
     "org.webjars" % "bootstrap" % versions.bootstrap % Provided,
     "com.lihaoyi" %% "utest" % versions.uTest % Test,
-    guice
+    guice, ws
   ))
 
   /** Dependencies only used by the JS project (note the use of %%% instead of %%) */

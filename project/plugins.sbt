@@ -15,6 +15,8 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-digest" % "1.1.0")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-gzip" % "1.0.0")
 
+addSbtPlugin("org.wartremover" % "sbt-wartremover" % "2.1.1")
+
 //addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.3.1")
 
 //addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.8.2")
