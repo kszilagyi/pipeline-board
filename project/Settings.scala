@@ -86,7 +86,8 @@ object Settings {
     "org.webjars" % "font-awesome" % "4.7.0" % Provided,
     "org.webjars" % "bootstrap" % versions.bootstrap % Provided,
     "com.lihaoyi" %% "utest" % versions.uTest % Test,
-    guice, ws
+    "io.lemonlabs" %% "scala-uri" % "0.4.16",
+     guice, ws
   ))
 
   /** Dependencies only used by the JS project (note the use of %%% instead of %%) */
@@ -98,7 +99,8 @@ object Settings {
     "me.chrons" %%% "diode-react" % versions.diode,
     "org.scala-js" %%% "scalajs-dom" % versions.scalaDom,
     "com.lihaoyi" %%% "utest" % versions.uTest % Test,
-    "biz.enef" %%% "slogging" % "0.5.2"
+    "biz.enef" %%% "slogging" % "0.5.2",
+    "com.typesafe.akka" %% "akka-typed" % "2.5.3"
   ))
 
   /** Dependencies for external JS libs that are bundled into a single .js file according to dependency order */

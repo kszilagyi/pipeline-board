@@ -3,10 +3,10 @@
 # ~~~~
 
 # Home page
-GET     /                                 controllers.Application.index
+GET     /                                 Application.index
 
 GET     /assets/*file                     controllers.Assets.versioned(path="/public", file: Asset)
 
 # Autowire calls
-# POST    /api/*path                        controllers.Application.autowireApi(path: String)
+# POST    /api/*path                        Application.autowireApi(path: String)
 

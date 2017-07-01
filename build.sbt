@@ -3,14 +3,18 @@ import sbt.Keys._
 
 //Skeleton copied and modified from: https://github.com/ochrons/scalajs-spa-tutorial
 
+lazy val commonSettings = Seq(
+  wartremoverErrors ++= Warts.allBut(Wart.Any, Wart.Nothing, Wart.ImplicitParameter)
+)
 
 // a special crossProject for configuring a JS/JVM/shared structure
 lazy val shared = (crossProject.crossType(CrossType.Pure) in file("shared"))
   .settings(
     scalaVersion := Settings.versions.scala,
     libraryDependencies ++= Settings.sharedDependencies.value,
-    cancelable in Global := true
-)
+    cancelable in Global := true,
+    commonSettings
+  )
   // set up settings specific to the JS project
   .jsConfigure(_ enablePlugins ScalaJSWeb)
 
@@ -41,7 +45,8 @@ lazy val client: Project = (project in file("client"))
     scalaJSUseMainModuleInitializer := true,
     scalaJSUseMainModuleInitializer in Test := false,
     // use uTest framework for tests
-    testFrameworks += new TestFramework("utest.runner.Framework")
+    testFrameworks += new TestFramework("utest.runner.Framework"),
+    commonSettings
   )
   .enablePlugins(ScalaJSPlugin, ScalaJSWeb)
   .dependsOn(sharedJS)
@@ -59,34 +64,43 @@ lazy val server = (project in file("server"))
     libraryDependencies ++= Settings.jvmDependencies.value,
     commands += ReleaseCmd,
     // triggers scalaJSPipeline when using compile or continuous compilation
-    compile in Compile := { ((compile in Compile) dependsOn scalaJSPipeline).value },
+    compile in Compile := {
+      ((compile in Compile) dependsOn scalaJSPipeline).value
+    },
     // connect to the client project
     scalaJSProjects := clients,
     pipelineStages in Assets := Seq(scalaJSPipeline),
     pipelineStages := Seq(digest, gzip),
     // compress CSS
-    LessKeys.compress in Assets := true
+    LessKeys.compress in Assets := true,
+    wartremoverExcluded += crossTarget.value / "routes" / "main" / "router" / "Routes.scala",
+    wartremoverExcluded += crossTarget.value / "routes" / "main" / "router" / "RoutesPrefix.scala",
+    wartremoverExcluded += crossTarget.value / "routes" / "main" / "controllers" / "ReverseRoutes.scala",
+    wartremoverExcluded += crossTarget.value / "routes" / "main" / "controllers" / "javascript" / "JavaScriptReverseRoutes.scala",
+    wartremoverExcluded += crossTarget.value / "twirl" / "main"/ "views" / "html" / "index.template.scala",
+    wartremoverExcluded += crossTarget.value / "twirl" / "main"/ "views" / "html" / "tags" / "_asset.template.scala",
+    commonSettings
   )
   .enablePlugins(PlayScala)
   .disablePlugins(PlayLayoutPlugin) // use the standard directory layout instead of Play's custom
   .aggregate(clients.map(projectToRef): _*)
   .dependsOn(sharedJVM)
 
+
 // Command for building a release
 lazy val ReleaseCmd = Command.command("release") {
-  state => "set elideOptions in client := Seq(\"-Xelide-below\", \"WARNING\")" ::
-    "client/clean" ::
-    "client/test" ::
-    "server/clean" ::
-    "server/test" ::
-    "server/dist" ::
-    "set elideOptions in client := Seq()" ::
-    state
+  state =>
+    "set elideOptions in client := Seq(\"-Xelide-below\", \"WARNING\")" ::
+      "client/clean" ::
+      "client/test" ::
+      "server/clean" ::
+      "server/test" ::
+      "server/dist" ::
+      "set elideOptions in client := Seq()" ::
+      state
 }
 
 // lazy val root = (project in file(".")).aggregate(client, server)
 
 // loads the Play server project at sbt startup
 onLoad in Global := (Command.process("project server", _: State)) compose (onLoad in Global).value
-
-wartremoverErrors ++= Warts.all
