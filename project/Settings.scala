@@ -87,6 +87,7 @@ object Settings {
     "org.webjars" % "bootstrap" % versions.bootstrap % Provided,
     "com.lihaoyi" %% "utest" % versions.uTest % Test,
     "io.lemonlabs" %% "scala-uri" % "0.4.16",
+    "com.typesafe.akka" %% "akka-typed" % "2.5.3",
      guice, ws
   ))
 
@@ -99,8 +100,7 @@ object Settings {
     "me.chrons" %%% "diode-react" % versions.diode,
     "org.scala-js" %%% "scalajs-dom" % versions.scalaDom,
     "com.lihaoyi" %%% "utest" % versions.uTest % Test,
-    "biz.enef" %%% "slogging" % "0.5.2",
-    "com.typesafe.akka" %% "akka-typed" % "2.5.3"
+    "biz.enef" %%% "slogging" % "0.5.2"
   ))
 
   /** Dependencies for external JS libs that are bundled into a single .js file according to dependency order */

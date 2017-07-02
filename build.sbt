@@ -4,7 +4,9 @@ import sbt.Keys._
 //Skeleton copied and modified from: https://github.com/ochrons/scalajs-spa-tutorial
 
 lazy val commonSettings = Seq(
-  wartremoverErrors ++= Warts.allBut(Wart.Any, Wart.Nothing, Wart.ImplicitParameter)
+  wartremoverErrors ++= Warts.allBut(Wart.Any, Wart.Nothing, Wart.ImplicitParameter, Wart.Product, Wart.Serializable),
+  // use uTest framework for tests
+  testFrameworks += new TestFramework("utest.runner.Framework")
 )
 
 // a special crossProject for configuring a JS/JVM/shared structure
@@ -44,8 +46,6 @@ lazy val client: Project = (project in file("client"))
     // use Scala.js provided launcher code to start the client app
     scalaJSUseMainModuleInitializer := true,
     scalaJSUseMainModuleInitializer in Test := false,
-    // use uTest framework for tests
-    testFrameworks += new TestFramework("utest.runner.Framework"),
     commonSettings
   )
   .enablePlugins(ScalaJSPlugin, ScalaJSWeb)
