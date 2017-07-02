@@ -6,7 +6,10 @@ import sbt.Keys._
 lazy val commonSettings = Seq(
   wartremoverErrors ++= Warts.allBut(Wart.Any, Wart.Nothing, Wart.ImplicitParameter, Wart.Product, Wart.Serializable),
   // use uTest framework for tests
-  testFrameworks += new TestFramework("utest.runner.Framework")
+  testFrameworks += new TestFramework("utest.runner.Framework"),
+  addCompilerPlugin(
+    "org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full
+  )
 )
 
 // a special crossProject for configuring a JS/JVM/shared structure

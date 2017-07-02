@@ -1,7 +1,9 @@
 import sbt._
+import Settings.versions._
 import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport._
 import play.sbt.PlayImport.guice
 import play.sbt.PlayImport.ws
+import sbt.Keys.libraryDependencies
 
 object Settings {
   val name = "multi-ci-dashboard"
@@ -69,23 +71,32 @@ object Settings {
     val chartjs = "2.4.0"
 
     val scalajsScripts = "1.1.0"
+    val circeVersion = "0.8.0"
+    val enumeratumVersion = "1.5.12"
   }
 
   /**
     * These dependencies are shared between JS and JVM projects
     * the special %%% function selects the correct version for each project
     */
-  val sharedDependencies = Def.setting(Seq(
-    "com.lihaoyi" %%% "autowire" % versions.autowire,
-    "com.lihaoyi" %% "upickle" % "0.4.4"
-  ))
+  val sharedDependencies = Def.setting(
+    Seq(
+      "com.lihaoyi" %%% "autowire" % autowire,
+      "com.beachape" %%% "enumeratum" % enumeratumVersion,
+      "com.beachape" %%% "enumeratum-circe" % enumeratumVersion
+  ) ++ Seq(
+      "io.circe" %%% "circe-core",
+      "io.circe" %%% "circe-generic",
+      "io.circe" %%% "circe-parser"
+    ).map(_ % circeVersion)
+  )
 
   /** Dependencies only used by the JVM project */
   val jvmDependencies = Def.setting(Seq(
-    "com.vmunier" %% "scalajs-scripts" % versions.scalajsScripts,
+    "com.vmunier" %% "scalajs-scripts" % scalajsScripts,
     "org.webjars" % "font-awesome" % "4.7.0" % Provided,
-    "org.webjars" % "bootstrap" % versions.bootstrap % Provided,
-    "com.lihaoyi" %% "utest" % versions.uTest % Test,
+    "org.webjars" % "bootstrap" % bootstrap % Provided,
+    "com.lihaoyi" %% "utest" % uTest % Test,
     "io.lemonlabs" %% "scala-uri" % "0.4.16",
     "com.typesafe.akka" %% "akka-typed" % "2.5.3",
      guice, ws
@@ -93,20 +104,20 @@ object Settings {
 
   /** Dependencies only used by the JS project (note the use of %%% instead of %%) */
   val scalajsDependencies = Def.setting(Seq(
-    "com.github.japgolly.scalajs-react" %%% "core" % versions.scalajsReact,
-    "com.github.japgolly.scalajs-react" %%% "extra" % versions.scalajsReact,
-    "com.github.japgolly.scalacss" %%% "ext-react" % versions.scalaCSS,
-    "me.chrons" %%% "diode" % versions.diode,
-    "me.chrons" %%% "diode-react" % versions.diode,
-    "org.scala-js" %%% "scalajs-dom" % versions.scalaDom,
-    "com.lihaoyi" %%% "utest" % versions.uTest % Test,
+    "com.github.japgolly.scalajs-react" %%% "core" % scalajsReact,
+    "com.github.japgolly.scalajs-react" %%% "extra" % scalajsReact,
+    "com.github.japgolly.scalacss" %%% "ext-react" % scalaCSS,
+    "me.chrons" %%% "diode" % diode,
+    "me.chrons" %%% "diode-react" % diode,
+    "org.scala-js" %%% "scalajs-dom" % scalaDom,
+    "com.lihaoyi" %%% "utest" % uTest % Test,
     "biz.enef" %%% "slogging" % "0.5.2"
   ))
 
   /** Dependencies for external JS libs that are bundled into a single .js file according to dependency order */
   val jsDependencies = Def.setting(Seq(
-    "org.webjars.bower" % "react" % versions.react / "react-with-addons.js" minified "react-with-addons.min.js" commonJSName "React",
-    "org.webjars.bower" % "react" % versions.react / "react-dom.js" minified "react-dom.min.js" dependsOn "react-with-addons.js" commonJSName "ReactDOM",
-    "org.webjars" % "chartjs" % versions.chartjs / "Chart.js" minified "Chart.min.js"
+    "org.webjars.bower" % "react" % react / "react-with-addons.js" minified "react-with-addons.min.js" commonJSName "React",
+    "org.webjars.bower" % "react" % react / "react-dom.js" minified "react-dom.min.js" dependsOn "react-with-addons.js" commonJSName "ReactDOM",
+    "org.webjars" % "chartjs" % chartjs / "Chart.js" minified "Chart.min.js"
   ))
 }
