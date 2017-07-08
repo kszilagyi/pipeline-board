@@ -34,21 +34,24 @@ final case class JenkinsJobUrl(url: Uri) {
 final case class BuildNumber(i: Int)
 
 object JenkinsFetcher {
+
   sealed trait Incoming
+
   final case class Fetch(job: JenkinsJobUrl, replyTo: ActorRef[FetchResult]) extends Incoming
+
   private final case class FirstSuccessful(job: JenkinsJobUrl, jobNumbers: Seq[BuildNumber],
-                                        replyTo: ActorRef[FetchResult]) extends Incoming
+                                           replyTo: ActorRef[FetchResult]) extends Incoming
 
   private def restify(u: Uri) = u / "api/json" ? "pretty=true"
 
   @SuppressWarnings(Array(Wart.AsInstanceOf))
-  private def safeRead[T : Decoder](response: WSResponse, destination: Uri): Either[ErrorAndRequest, T] = {
+  private def safeRead[T: Decoder](response: WSResponse, destination: Uri): Either[ErrorAndRequest, T] = {
     if (response.status !=== 200) Left(ErrorAndRequest(destination, ResponseError.invalidResponseCode(response)))
     else decode[T](response.body).left.map(err => ErrorAndRequest(destination, ResponseError.invalidJson(err)))
   }
 }
 
-class JenkinsFetcher @Inject() (ws: WSClient)(implicit ec: ExecutionContext) {
+class JenkinsFetcher @Inject()(ws: WSClient)(implicit ec: ExecutionContext) {
 
   @SuppressWarnings(Array(Wart.Null, Wart.Public)) //I think these are false positive
   val behaviour: Actor.Immutable[Incoming] = Actor.immutable[Incoming] { (ctx, msg) =>
@@ -68,15 +71,14 @@ class JenkinsFetcher @Inject() (ws: WSClient)(implicit ec: ExecutionContext) {
         }
         Actor.same
       case FirstSuccessful(job, buildNumbers, replyTo) =>
-        val liftedFutures = buildNumbers.map{ buildNumber =>
+        val liftedFutures = buildNumbers.map { buildNumber =>
           val destination = restify(job.buildInfo(buildNumber))
-            ws.url(destination).get.map(result => safeRead[PartialDetailedBuildInfo](result, destination)
-              .map(_.result)).lift map { result => result match {
-                case Failure(exception) => Left(ErrorAndRequest(destination, ResponseError.failedToConnect(exception)))
-                case Success(value) => value
-              }
-              }
+          ws.url(destination).get.map(result => safeRead[PartialDetailedBuildInfo](result, destination)
+            .map(_.result)).lift map {
+              case Failure(exception) => Left(ErrorAndRequest(destination, ResponseError.failedToConnect(exception)))
+              case Success(value) => value
           }
+        }
         Future.sequence(liftedFutures) foreach { buildStatuses => //this future can't fail because all the futures are lifted#
           replyTo ! FetchResult(Right(buildStatuses))
         }

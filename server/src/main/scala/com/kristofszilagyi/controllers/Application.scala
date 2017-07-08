@@ -31,7 +31,6 @@ class Application @Inject() (fetcher: JenkinsFetcher)(val config: Configuration)
                             (implicit ec: ExecutionContext) extends InjectedController {
 
   def root: Action[AnyContent] = Action {
-
     Ok(views.html.index("Multi CI dashboard")(config))
   }
 
