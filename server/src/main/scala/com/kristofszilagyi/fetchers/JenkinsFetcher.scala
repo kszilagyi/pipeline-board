@@ -17,23 +17,7 @@ import io.circe.generic.JsonCodec
 import io.circe.parser.decode
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
-import enumeratum._
-
-import scala.collection.immutable
-
-
-sealed abstract class BuildStatus(override val entryName: String) extends EnumEntry
-
-
-object BuildStatus extends Enum[BuildStatus] with CirceEnum[BuildStatus] {
-  val values: immutable.IndexedSeq[BuildStatus] = findValues
-
-  case object Building extends BuildStatus("BUILDING")
-  case object Failed extends BuildStatus("FAILED")
-  case object Successful extends BuildStatus("SUCCESS")
-  case object Aborted extends BuildStatus("ABORTED")
-}
+import scala.util.{Failure, Success}
 
 @SuppressWarnings(Array(Wart.Public))
 object JenkinsJson { //this object is only here because @JsonCodec has the public wart :(
@@ -50,7 +34,6 @@ final case class JenkinsJobUrl(url: Uri) {
 final case class BuildNumber(i: Int)
 
 object JenkinsFetcher {
-  final case class FetchResult(r: Try[Either[ErrorAndRequest, Seq[Try[scala.Either[ErrorAndRequest, BuildStatus]]]]])
   sealed trait Incoming
   final case class Fetch(job: JenkinsJobUrl, replyTo: ActorRef[FetchResult]) extends Incoming
   private final case class FirstSuccessful(job: JenkinsJobUrl, jobNumbers: Seq[BuildNumber],
@@ -59,17 +42,11 @@ object JenkinsFetcher {
   private def restify(u: Uri) = u / "api/json" ? "pretty=true"
 
   @SuppressWarnings(Array(Wart.AsInstanceOf))
-  private def safeRead[T : Decoder](body: WSResponse, destination: Uri): Either[ErrorAndRequest, T] = {
-    if (body.status !=== 200) Left(ErrorAndRequest(destination, InvalidResponseCode(body)))
-    else decode[T](body.body).left.map(err => ErrorAndRequest(destination, JsonError(err)))
+  private def safeRead[T : Decoder](response: WSResponse, destination: Uri): Either[ErrorAndRequest, T] = {
+    if (response.status !=== 200) Left(ErrorAndRequest(destination, ResponseError.invalidResponseCode(response)))
+    else decode[T](response.body).left.map(err => ErrorAndRequest(destination, ResponseError.invalidJson(err)))
   }
 }
-
-final case class ErrorAndRequest(request: Uri, responseError: ResponseError)
-
-sealed trait ResponseError
-final case class JsonError(invalid: io.circe.Error) extends ResponseError
-final case class InvalidResponseCode(body: WSResponse) extends ResponseError
 
 class JenkinsFetcher @Inject() (ws: WSClient)(implicit ec: ExecutionContext) {
 
@@ -81,8 +58,8 @@ class JenkinsFetcher @Inject() (ws: WSClient)(implicit ec: ExecutionContext) {
         val future = ws.url(destination).get.map(response => safeRead[PartialJenkinsJobInfo](response, destination))
 
         future onComplete {
-          case Failure(ex) => replyTo ! FetchResult(Failure(ex))
-          case Success(Left(error)) => replyTo ! FetchResult(Success(Left(error)))
+          case Failure(ex) => replyTo ! FetchResult(Left(ErrorAndRequest(destination, ResponseError.failedToConnect(ex))))
+          case Success(Left(error)) => replyTo ! FetchResult(Left(error))
           case Success(Right(jenkinsJobInfo)) => ctx.self ! FirstSuccessful(
             job,
             jenkinsJobInfo.builds.map(partialBuildInfo => BuildNumber(partialBuildInfo.number)),
@@ -93,10 +70,15 @@ class JenkinsFetcher @Inject() (ws: WSClient)(implicit ec: ExecutionContext) {
       case FirstSuccessful(job, buildNumbers, replyTo) =>
         val liftedFutures = buildNumbers.map{ buildNumber =>
           val destination = restify(job.buildInfo(buildNumber))
-            ws.url(destination).get.map(result => safeRead[PartialDetailedBuildInfo](result, destination).map(_.result)).lift
+            ws.url(destination).get.map(result => safeRead[PartialDetailedBuildInfo](result, destination)
+              .map(_.result)).lift map { result => result match {
+                case Failure(exception) => Left(ErrorAndRequest(destination, ResponseError.failedToConnect(exception)))
+                case Success(value) => value
+              }
+              }
           }
         Future.sequence(liftedFutures) foreach { buildStatuses => //this future can't fail because all the futures are lifted#
-          replyTo ! FetchResult(Success(Right(buildStatuses)))
+          replyTo ! FetchResult(Right(buildStatuses))
         }
         Actor.same
     }

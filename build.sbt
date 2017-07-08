@@ -4,7 +4,8 @@ import sbt.Keys._
 //Skeleton copied and modified from: https://github.com/ochrons/scalajs-spa-tutorial
 
 lazy val commonSettings = Seq(
-  wartremoverErrors ++= Warts.allBut(Wart.Any, Wart.Nothing, Wart.ImplicitParameter, Wart.Product, Wart.Serializable),
+  wartremoverErrors ++= Warts.allBut(Wart.Any, Wart.Nothing, Wart.ImplicitParameter, Wart.Product, Wart.Serializable,
+                                     Wart.PublicInference),
   // use uTest framework for tests
   testFrameworks += new TestFramework("utest.runner.Framework"),
   addCompilerPlugin(
