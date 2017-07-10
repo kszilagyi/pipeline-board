@@ -1,18 +1,48 @@
 package com.kristofszilagyi
 
+
 import Test._
-import Wart._
-import japgolly.scalajs.react.component.Scala.Component
+import com.kristofszilagyi.shared.{AutowireApi, Wart}
+import io.circe.syntax.EncoderOps
+import io.circe.{Decoder, Encoder}
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{BackendScope, Callback, CallbackTo, CtorType, ScalaComponent}
+import japgolly.scalajs.react.{BackendScope, Callback, CallbackTo, ScalaComponent}
 import org.scalajs.dom
 import org.scalajs.dom.html.Div
 import slogging.{LoggerConfig, PrintLoggerFactory}
+import Wart._
+import autowire.clientFutureCallable
 
+import scala.concurrent.Future
 import scala.scalajs.js
-
+import scala.scalajs.js.typedarray.ArrayBuffer
+import io.circe.parser.decode
+import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 final case class State(secondsElapsed: Long)
+
+
+// client-side implementation, and call-site
+@SuppressWarnings(Array(Wart.EitherProjectionPartial, Wart.Throw))
+object MyClient extends autowire.Client[String, Decoder, Encoder]{
+  def write[Result: Encoder](r: Result) = r.asJson.spaces2
+  def read[Result: Decoder](p: String): Result = {
+    val either = decode[Result](p)
+    either.right.getOrElse(throw either.left.get) //stupid auto wire api, get server side version
+  }
+
+  def doCall(req: Request): Future[String] = {
+    println(req.path.mkString("/"))
+    /*dom.ext.Ajax.post(
+      url = "/api/" + req.path.mkString("/"),
+      headers = Map("Content-Type" -> "application/json")
+    ).map(r => r.response.asInstanceOf[ArrayBuffer].toString)*/
+    ???
+  }
+
+
+}
+
 
 final class Backend($: BackendScope[Unit, State]) {
   @SuppressWarnings(Array(Var))
@@ -49,6 +79,7 @@ object JsMain extends js.JSApp {
   def main(): Unit = {
 
     println("Application starting")
+    MyClient[AutowireApi].dataFeed().call().foreach(println)
 
     val _ = Timer().renderIntoDOM(dom.document.getElementById("root"))
   }

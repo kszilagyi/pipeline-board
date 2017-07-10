@@ -4,10 +4,12 @@ import javax.inject.Inject
 
 import akka.typed._
 import akka.typed.scaladsl.Actor
-import com.kristofszilagyi.Wart
+import com.kristofszilagyi._
 import com.kristofszilagyi.fetchers.JenkinsFetcher._
 import com.kristofszilagyi.fetchers.JenkinsJson.{PartialDetailedBuildInfo, PartialJenkinsJobInfo}
+import com.kristofszilagyi.shared._
 import com.kristofszilagyi.utils.FutureUtils.RichFuture
+import com.kristofszilagyi.utils.ResponseErrorUtils.RichResponseError
 import com.netaporter.uri.Uri
 import com.netaporter.uri.dsl._
 import play.api.libs.ws._

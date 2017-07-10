@@ -1,5 +1,4 @@
-package com.kristofszilagyi
-
+package com.kristofszilagyi.shared
 
 @SuppressWarnings(Array("org.wartremover.warts.FinalVal", "org.wartremover.warts.PublicInference"))
 object Wart {
@@ -12,4 +11,6 @@ object Wart {
   final val Null = "org.wartremover.warts.Null"
   final val Product = "org.wartremover.warts.Product"
   final val Serializable = "org.wartremover.warts.Serializable"
+  final val EitherProjectionPartial = "org.wartremover.warts.EitherProjectionPartial"
+  final val Throw = "org.wartremover.warts.Throw"
 }
