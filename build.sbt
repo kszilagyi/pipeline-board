@@ -50,7 +50,8 @@ lazy val client: Project = (project in file("client"))
     // use Scala.js provided launcher code to start the client app
     scalaJSUseMainModuleInitializer := true,
     scalaJSUseMainModuleInitializer in Test := false,
-    commonSettings
+    commonSettings,
+    wartremoverErrors -= Wart.ToString //this is usually translated to js tostring which the scala code don't know about
   )
   .enablePlugins(ScalaJSPlugin, ScalaJSWeb)
   .dependsOn(sharedJS)

@@ -8,6 +8,7 @@ object Wart {
 
   final val Equals = "org.wartremover.warts.Equals"
   final val AsInstanceOf = "org.wartremover.warts.AsInstanceOf"
+  final val ToString = "org.wartremover.warts.ToString"
   final val Null = "org.wartremover.warts.Null"
   final val Product = "org.wartremover.warts.Product"
   final val Serializable = "org.wartremover.warts.Serializable"

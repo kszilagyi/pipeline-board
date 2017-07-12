@@ -15,21 +15,10 @@ import io.circe.{Decoder, Encoder}
 import play.api.Configuration
 import play.api.mvc._
 import io.circe.syntax.EncoderOps
-import play.api.http.{ContentTypeOf, ContentTypes, Writeable}
 import io.circe.parser.decode
 
-import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
-
-object CirceJson {
-  implicit def writeable[T](implicit encoder: Encoder[T]): Writeable[T] = {
-    Writeable(data => ByteString(encoder.apply(data).spaces2))
-  }
-
-  implicit def contentType[T]: ContentTypeOf[T] = {
-    ContentTypeOf(Some(ContentTypes.JSON))
-  }
-}
+import scala.concurrent.duration.DurationInt
 
 class AutowireApiImpl(fetcher: JenkinsFetcher) extends AutowireApi {
   def dataFeed(): Future[FetchResult] = {
@@ -69,13 +58,12 @@ class Application @Inject() (fetcher: JenkinsFetcher)(val config: Configuration)
   val autowireServer = new AutowireServer(new AutowireApiImpl(fetcher))
 
   def autowireApi(path: String): Action[AnyContent] = Action.async { implicit request =>
-    import CirceJson._
 
     // call Autowire route
     autowireServer.routes(
       autowire.Core.Request(path.split("/"), request.queryString.mapValues(_.mkString))
-    ).map(buffer => {
-      Ok(buffer)
+    ).map(s => {
+      Ok(s)
     })
   }
 

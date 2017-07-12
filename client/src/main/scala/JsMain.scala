@@ -19,8 +19,8 @@ import scala.scalajs.js
 import scala.scalajs.js.typedarray.ArrayBuffer
 import io.circe.parser.decode
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
-final case class State(secondsElapsed: Long)
 
+final case class State(s: String)
 
 // client-side implementation, and call-site
 @SuppressWarnings(Array(Wart.EitherProjectionPartial, Wart.Throw))
@@ -31,25 +31,27 @@ object MyClient extends autowire.Client[String, Decoder, Encoder]{
     either.right.getOrElse(throw either.left.get) //stupid auto wire api, get server side version
   }
 
+  @SuppressWarnings(Array(Wart.AsInstanceOf))
   def doCall(req: Request): Future[String] = {
     println(req.path.mkString("/"))
-    /*dom.ext.Ajax.post(
+    dom.ext.Ajax.get(
       url = "/api/" + req.path.mkString("/"),
-      headers = Map("Content-Type" -> "application/json")
-    ).map(r => r.response.asInstanceOf[ArrayBuffer].toString)*/
-    ???
+    ).map(r => r.response.asInstanceOf[ArrayBuffer].toString)
   }
-
-
 }
-
 
 final class Backend($: BackendScope[Unit, State]) {
   @SuppressWarnings(Array(Var))
   private var interval: Option[js.timers.SetIntervalHandle] = None
-  def tick: CallbackTo[Unit] =
-    $.modState(s => State(s.secondsElapsed + 1))
+  def tick: CallbackTo[Unit] = Callback.future {
+    MyClient[AutowireApi].dataFeed().call().map { s =>
+      setString(s.toString)
+    }
+  }
 
+  def setString(s: String): CallbackTo[Unit] = {
+    Callback.log("setString") >> $.setState(State(s))
+  }
   def start: Callback = Callback {
     interval = Some(js.timers.setInterval(1000)(tick.runNow()))
   }
@@ -60,13 +62,12 @@ final class Backend($: BackendScope[Unit, State]) {
   }
 
   def render(s: State): TagOf[Div] =
-    <.div("Seconds elapsed: ", s.secondsElapsed)
-}
+    <.div("Seconds elapsed: ", s.s)}
 
 object Test {
   @SuppressWarnings(Array(Public))
   val Timer = ScalaComponent.builder[Unit]("Timer")
-    .initialState(State(0))
+    .initialState(State("nothing"))
     .renderBackend[Backend]
     .componentDidMount(_.backend.start)
     .componentWillUnmount(_.backend.clear)
@@ -79,7 +80,6 @@ object JsMain extends js.JSApp {
   def main(): Unit = {
 
     println("Application starting")
-    MyClient[AutowireApi].dataFeed().call().foreach(println)
 
     val _ = Timer().renderIntoDOM(dom.document.getElementById("root"))
   }
