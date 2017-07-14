@@ -63,7 +63,6 @@ object Settings {
     val scalaCSS = "0.5.3"
     val log4js = "1.4.10"
     val autowire = "0.2.6"
-    val diode = "1.1.0"
     val uTest = "0.4.7"
 
     val react = "15.6.1"
@@ -107,17 +106,17 @@ object Settings {
     "com.github.japgolly.scalajs-react" %%% "core" % scalajsReact,
     "com.github.japgolly.scalajs-react" %%% "extra" % scalajsReact,
     "com.github.japgolly.scalacss" %%% "ext-react" % scalaCSS,
-    "me.chrons" %%% "diode" % diode,
-    "me.chrons" %%% "diode-react" % diode,
     "org.scala-js" %%% "scalajs-dom" % scalaDom,
     "com.lihaoyi" %%% "utest" % uTest % Test,
-    "biz.enef" %%% "slogging" % "0.5.2"
+    "biz.enef" %%% "slogging" % "0.5.2",
+    "com.github.japgolly.scalajs-react" %%% "test" % scalajsReact % "test"
   ))
 
   /** Dependencies for external JS libs that are bundled into a single .js file according to dependency order */
   val jsDependencies = Def.setting(Seq(
     "org.webjars.bower" % "react" % react / "react-with-addons.js" minified "react-with-addons.min.js" commonJSName "React",
     "org.webjars.bower" % "react" % react / "react-dom.js" minified "react-dom.min.js" dependsOn "react-with-addons.js" commonJSName "ReactDOM",
-    "org.webjars" % "chartjs" % chartjs / "Chart.js" minified "Chart.min.js"
-  ))
+    "org.webjars" % "chartjs" % chartjs / "Chart.js" minified "Chart.min.js",
+    "org.webjars.bower" % "react" % react % "test" / "react-dom-server.js" minified  "react-dom-server.min.js" dependsOn "react-dom.js" commonJSName "ReactDOMServer")
+  )
 }

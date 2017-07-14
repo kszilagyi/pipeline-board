@@ -16,7 +16,9 @@ object ResponseError {
   }
 }
 
-@JsonCodec final case class ErrorAndRequest(request: String, responseError: ResponseError)
+@JsonCodec final case class Url(s: String)
+
+@JsonCodec final case class ErrorAndRequest(request: Url, responseError: ResponseError)
 
 @JsonCodec final case class FetchResult(r: Either[ErrorAndRequest, Seq[scala.Either[ErrorAndRequest, BuildStatus]]])
 

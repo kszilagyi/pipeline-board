@@ -14,6 +14,7 @@ import com.netaporter.uri.Uri
 import com.netaporter.uri.dsl._
 import play.api.libs.ws._
 import com.kristofszilagyi.utils.TypeSafeEqualsOps._
+import com.kristofszilagyi.utils.UrlOps.RichUri
 import io.circe._
 import io.circe.generic.JsonCodec
 import io.circe.parser.decode
@@ -48,8 +49,8 @@ object JenkinsFetcher {
 
   @SuppressWarnings(Array(Wart.AsInstanceOf))
   private def safeRead[T: Decoder](response: WSResponse, destination: Uri): Either[ErrorAndRequest, T] = {
-    if (response.status !=== 200) Left(ErrorAndRequest(destination, ResponseError.invalidResponseCode(response)))
-    else decode[T](response.body).left.map(err => ErrorAndRequest(destination, ResponseError.invalidJson(err)))
+    if (response.status !=== 200) Left(ErrorAndRequest(destination.toUrl, ResponseError.invalidResponseCode(response)))
+    else decode[T](response.body).left.map(err => ErrorAndRequest(destination.toUrl, ResponseError.invalidJson(err)))
   }
 }
 
@@ -63,7 +64,7 @@ class JenkinsFetcher @Inject()(ws: WSClient)(implicit ec: ExecutionContext) {
         val future = ws.url(destination).get.map(response => safeRead[PartialJenkinsJobInfo](response, destination))
 
         future onComplete {
-          case Failure(ex) => replyTo ! FetchResult(Left(ErrorAndRequest(destination, ResponseError.failedToConnect(ex))))
+          case Failure(ex) => replyTo ! FetchResult(Left(ErrorAndRequest(destination.toUrl, ResponseError.failedToConnect(ex))))
           case Success(Left(error)) => replyTo ! FetchResult(Left(error))
           case Success(Right(jenkinsJobInfo)) => ctx.self ! FirstSuccessful(
             job,
@@ -77,7 +78,7 @@ class JenkinsFetcher @Inject()(ws: WSClient)(implicit ec: ExecutionContext) {
           val destination = restify(job.buildInfo(buildNumber))
           ws.url(destination).get.map(result => safeRead[PartialDetailedBuildInfo](result, destination)
             .map(_.result)).lift map {
-              case Failure(exception) => Left(ErrorAndRequest(destination, ResponseError.failedToConnect(exception)))
+              case Failure(exception) => Left(ErrorAndRequest(destination.toUrl, ResponseError.failedToConnect(exception)))
               case Success(value) => value
           }
         }
