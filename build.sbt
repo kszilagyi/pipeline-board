@@ -54,7 +54,7 @@ lazy val client: Project = (project in file("client"))
     wartremoverErrors -= Wart.ToString //this is usually translated to js tostring which the scala code don't know about
   )
   .enablePlugins(ScalaJSPlugin, ScalaJSWeb)
-  .dependsOn(sharedJS)
+  .dependsOn(sharedJS % "test->test;compile->compile")
 
 // Client projects (just one in this case)
 lazy val clients = Seq(client)
@@ -89,7 +89,7 @@ lazy val server = (project in file("server"))
   .enablePlugins(PlayScala)
   .disablePlugins(PlayLayoutPlugin) // use the standard directory layout instead of Play's custom
   .aggregate(clients.map(projectToRef): _*)
-  .dependsOn(sharedJVM)
+  .dependsOn(sharedJVM % "test->test;compile->compile")
 
 
 // Command for building a release
