@@ -14,4 +14,5 @@ object Wart {
   final val Serializable = "org.wartremover.warts.Serializable"
   final val EitherProjectionPartial = "org.wartremover.warts.EitherProjectionPartial"
   final val Throw = "org.wartremover.warts.Throw"
+  final val TraversableOps = "org.wartremover.warts.TraversableOps"
 }

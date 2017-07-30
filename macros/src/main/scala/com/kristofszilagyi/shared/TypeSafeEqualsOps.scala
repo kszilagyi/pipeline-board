@@ -1,6 +1,4 @@
-package com.kristofszilagyi.utils
-
-import com.kristofszilagyi.shared.Wart
+package com.kristofszilagyi.shared
 
 object TypeSafeEqualsOps {
   @SuppressWarnings(Array(Wart.Equals))
