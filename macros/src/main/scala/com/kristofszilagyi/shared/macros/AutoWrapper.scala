@@ -16,10 +16,9 @@ object AutoWrapper {
     import Flag._
     val result = {
       annottees.map(_.tree).toList match {
-        case q"final case class $name(self: $innerTypeName) extends ..$parents { ..$body }" :: Nil =>
+        case q"@$annot final case class $name(self: $innerTypeName) extends ..$parents { ..$body }" :: Nil =>
           val innerType = c.typecheck(innerTypeName, c.TYPEmode).tpe
-            val result = q"""
-            final case class $name(self: $innerTypeName) extends ..$parents {
+            val result = q"""@$annot final case class $name(self: $innerTypeName) extends ..$parents {
               ..${
                 // TODO better filtering - allow overriding/overloading
                 val existingDirectMethods = body.flatMap(tree => tree match {
@@ -41,11 +40,11 @@ object AutoWrapper {
                   val parameters = member.typeSignature.paramLists
                   println(member)
                   val (result, impl) =
-                    if (memberResult ==== innerType) {
-                      (Ident(TypeName(name.toString)),  q"""${name.toString}(self.$memberName)""")
-                    } else {
+                    //if (memberResult ==== innerType) {
+                    //  (Ident(TypeName(name.toString)),  q"""${name.toString}(self.$memberName)""")
+                    //} else {
                       (TypeTree(memberResult), q"""self.$memberName""")
-                    }
+                    //}
                   if(parameters.nonEmpty && parameters.head.nonEmpty) {
                     println(parameters)
                    // val params = parameters.map(_.map(p => q"""${p.name.toTermName}: ${p.typeSignature}"""))
@@ -71,7 +70,7 @@ object AutoWrapper {
           """
           println(result)
           result
-        case _ => c.abort(c.enclosingPosition, "You have to annotate a final case class which have one self field")
+        case t => c.abort(c.enclosingPosition, s"You have to annotate a final case class which have one self field. Tree: ${show(t)}")
       }
     }
     c.Expr[Any](result)

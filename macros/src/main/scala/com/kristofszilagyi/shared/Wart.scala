@@ -15,4 +15,6 @@ object Wart {
   final val EitherProjectionPartial = "org.wartremover.warts.EitherProjectionPartial"
   final val Throw = "org.wartremover.warts.Throw"
   final val TraversableOps = "org.wartremover.warts.TraversableOps"
+  final val Overloading = "org.wartremover.warts.Overloading"
+  final val StringPlusAny = "org.wartremover.warts.StringPlusAny"
 }
