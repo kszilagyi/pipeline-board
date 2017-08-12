@@ -2,7 +2,6 @@ package com.kristofszilagyi
 
 import autowire.{ClientProxy, clientFutureCallable}
 import com.kristofszilagyi.Test._
-import com.kristofszilagyi.shared.Wart._
 import com.kristofszilagyi.shared.{AutowireApi, FetchResult, Url, Wart}
 import io.circe.parser.decode
 import io.circe.syntax.EncoderOps
@@ -20,7 +19,7 @@ import scala.concurrent.duration.{DurationLong, FiniteDuration}
 import scala.scalajs.js
 import scala.scalajs.js.timers.SetIntervalHandle
 import scala.scalajs.js.typedarray.ArrayBuffer
-
+import Wart._
 final case class State(s: String)
 
 

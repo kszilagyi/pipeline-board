@@ -13,7 +13,7 @@ import com.kristofszilagyi.utils.ResponseErrorUtils.RichResponseError
 import com.netaporter.uri.Uri
 import com.netaporter.uri.dsl._
 import play.api.libs.ws._
-import com.kristofszilagyi.utils.TypeSafeEqualsOps._
+import TypeSafeEqualsOps._
 import com.kristofszilagyi.utils.UrlOps.RichUri
 import io.circe._
 import io.circe.generic.JsonCodec

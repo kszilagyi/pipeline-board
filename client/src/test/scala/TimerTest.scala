@@ -1,6 +1,6 @@
 package com.kristofszilagyi
 
-import com.kristofszilagyi.shared.{BuildStatus, FetchResult, Wart}
+import com.kristofszilagyi.shared.{BuildStatus, FetchResult}
 import japgolly.scalajs.react.test.{ReactTestExt_MountedId, ReactTestUtils}
 import utest._
 
@@ -8,7 +8,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 import scala.scalajs.js.timers.SetIntervalHandle
 import com.kristofszilagyi.shared.SameThreadExecutionContext._
-
+import com.kristofszilagyi.shared.Wart
 final class MockTimers extends JsTimers {
   private val counter = Iterator.from(0)
 
@@ -44,7 +44,7 @@ object TimerTest extends TestSuite{
   val TestTimer = Test.timer(mockTimers, new MockAutowire())
 
   def tests = TestSuite {
-    'HelloWorld {
+    'InitialChangeOfValue {
       ReactTestUtils.withRenderedIntoBody(TestTimer()) { testTimer =>
         println(testTimer.getDOMNode.textContent)
         mockTimers.executeAll()
