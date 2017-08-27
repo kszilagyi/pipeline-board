@@ -1,10 +1,13 @@
 package com.kristofszilagyi.fetchers
 
+import java.sql.Timestamp
+import java.time.Instant
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 import akka.typed._
 import akka.typed.scaladsl.Actor
-import com.kristofszilagyi._
+import com.kristofszilagyi.{shared, _}
 import com.kristofszilagyi.fetchers.JenkinsFetcher._
 import com.kristofszilagyi.fetchers.JenkinsJson.{PartialDetailedBuildInfo, PartialJenkinsJobInfo}
 import com.kristofszilagyi.shared._
@@ -19,22 +22,22 @@ import io.circe._
 import io.circe.generic.JsonCodec
 import io.circe.parser.decode
 
+import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 @SuppressWarnings(Array(Wart.Public))
 object JenkinsJson { //this object is only here because @JsonCodec has the public wart :(
-  @JsonCodec final case class PartialDetailedBuildInfo(result: BuildStatus)
+  @JsonCodec final case class PartialDetailedBuildInfo(result: JenkinsBuildStatus, timestamp: Long, duration: Int)
 
   @JsonCodec final case class PartialBuildInfo(number: Int)
   @JsonCodec final case class PartialJenkinsJobInfo(builds: Seq[PartialBuildInfo])
 }
 
-final case class JenkinsJobUrl(url: Uri) {
-  def buildInfo(buildNumber: BuildNumber): Uri = url / buildNumber.i.toString
+final case class JenkinsJobUrl(uri: Uri) {
+  def buildInfo(buildNumber: BuildNumber): Uri = uri / buildNumber.i.toString
 }
 
-final case class BuildNumber(i: Int)
 
 object JenkinsFetcher {
 
@@ -48,9 +51,9 @@ object JenkinsFetcher {
   private def restify(u: Uri) = u / "api/json" ? "pretty=true"
 
   @SuppressWarnings(Array(Wart.AsInstanceOf))
-  private def safeRead[T: Decoder](response: WSResponse, destination: Uri): Either[ErrorAndRequest, T] = {
-    if (response.status !=== 200) Left(ErrorAndRequest(destination.toUrl, ResponseError.invalidResponseCode(response)))
-    else decode[T](response.body).left.map(err => ErrorAndRequest(destination.toUrl, ResponseError.invalidJson(err)))
+  private def safeRead[T: Decoder](response: WSResponse): Either[ResponseError, T] = {
+    if (response.status !=== 200) Left(ResponseError.invalidResponseCode(response))
+    else decode[T](response.body).left.map(err => ResponseError.invalidJson(err))
   }
 }
 
@@ -60,12 +63,13 @@ class JenkinsFetcher @Inject()(ws: WSClient)(implicit ec: ExecutionContext) {
   val behaviour: Actor.Immutable[Incoming] = Actor.immutable[Incoming] { (ctx, msg) =>
     msg match {
       case Fetch(job, replyTo) =>
-        val destination = restify(job.url)
-        val future = ws.url(destination).get.map(response => safeRead[PartialJenkinsJobInfo](response, destination))
+        val jobUrl = job.uri.toUrl
+        val destination = restify(job.uri)
+        val future = ws.url(destination).get.map(response => safeRead[PartialJenkinsJobInfo](response))
 
         future onComplete {
-          case Failure(ex) => replyTo ! FetchResult(Left(ErrorAndRequest(destination.toUrl, ResponseError.failedToConnect(ex))))
-          case Success(Left(error)) => replyTo ! FetchResult(Left(error))
+          case Failure(ex) => replyTo ! FetchResult(jobUrl, Left(ResponseError.failedToConnect(ex)))
+          case Success(Left(error)) => replyTo ! FetchResult(jobUrl, Left(error))
           case Success(Right(jenkinsJobInfo)) => ctx.self ! FirstSuccessful(
             job,
             jenkinsJobInfo.builds.map(partialBuildInfo => BuildNumber(partialBuildInfo.number)),
@@ -74,16 +78,21 @@ class JenkinsFetcher @Inject()(ws: WSClient)(implicit ec: ExecutionContext) {
         }
         Actor.same
       case FirstSuccessful(job, buildNumbers, replyTo) =>
+        val jobUrl = job.uri.toUrl
         val liftedFutures = buildNumbers.map { buildNumber =>
           val destination = restify(job.buildInfo(buildNumber))
-          ws.url(destination).get.map(result => safeRead[PartialDetailedBuildInfo](result, destination)
-            .map(_.result)).lift map {
-              case Failure(exception) => Left(ErrorAndRequest(destination.toUrl, ResponseError.failedToConnect(exception)))
+          ws.url(destination).get.map(result => safeRead[PartialDetailedBuildInfo](result)
+            .map{ buildInfo =>
+              val startTime = Instant.ofEpochMilli(buildInfo.timestamp)
+              val endTime = startTime.plusMillis(buildInfo.duration.toLong)
+              JenkinsBuildInfo(buildInfo.result, startTime, endTime, buildNumber)
+            }).lift map {
+              case Failure(exception) => Left(ResponseError.failedToConnect(exception))
               case Success(value) => value
           }
         }
-        Future.sequence(liftedFutures) foreach { buildStatuses => //this future can't fail because all the futures are lifted#
-          replyTo ! FetchResult(Right(buildStatuses))
+        Future.sequence(liftedFutures) foreach { buildInfo => //this future can't fail because all the futures are lifted#
+          replyTo ! FetchResult(jobUrl, Right(buildInfo))
         }
         Actor.same
     }

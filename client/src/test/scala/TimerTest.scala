@@ -1,6 +1,9 @@
 package com.kristofszilagyi
 
-import com.kristofszilagyi.shared.{BuildStatus, FetchResult}
+import java.time.Instant
+
+import com.kristofszilagyi.shared.JenkinsBuildStatus.Successful
+import com.kristofszilagyi.shared._
 import japgolly.scalajs.react.test.{ReactTestExt_MountedId, ReactTestUtils}
 import utest._
 
@@ -8,7 +11,6 @@ import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 import scala.scalajs.js.timers.SetIntervalHandle
 import com.kristofszilagyi.shared.SameThreadExecutionContext._
-import com.kristofszilagyi.shared.Wart
 final class MockTimers extends JsTimers {
   private val counter = Iterator.from(0)
 
@@ -35,7 +37,9 @@ final class MockTimers extends JsTimers {
 
 final class MockAutowire extends MockableAutowire {
   def dataFeed(): Future[FetchResult] = {
-    Future.successful(FetchResult(Right(Seq(Right(BuildStatus.Building)))))
+    Future.successful(FetchResult(Url("example.com"),
+      Right(Seq(Right(JenkinsBuildInfo(Successful, Instant.now(), Instant.now(), BuildNumber(1)))))
+    ))
   }
 }
 
