@@ -2,7 +2,7 @@ package com.kristofszilagyi
 
 import autowire.{ClientProxy, clientFutureCallable}
 import com.kristofszilagyi.Test._
-import com.kristofszilagyi.shared.{AutowireApi, FetchResult, Url, Wart}
+import com.kristofszilagyi.shared._
 import io.circe.parser.decode
 import io.circe.syntax.EncoderOps
 import io.circe.{Decoder, Encoder}
@@ -56,11 +56,11 @@ object RealJsTimers extends JsTimers {
 }
 
 trait MockableAutowire {
-  def dataFeed(): Future[FetchResult]
+  def dataFeed(): Future[BulkFetchResult]
 }
 
 final class RealAutowire(self: AutowireApi.Type)(implicit ec: ExecutionContext) extends MockableAutowire {
-  def dataFeed(): Future[FetchResult] = self.dataFeed().call()
+  def dataFeed(): Future[BulkFetchResult] = self.dataFeed().call()
 }
 
 final class Backend($: BackendScope[Unit, State], timers: JsTimers, autowireApi: MockableAutowire)

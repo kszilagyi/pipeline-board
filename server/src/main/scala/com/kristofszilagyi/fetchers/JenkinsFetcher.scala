@@ -17,10 +17,12 @@ import com.netaporter.uri.Uri
 import com.netaporter.uri.dsl._
 import play.api.libs.ws._
 import TypeSafeEqualsOps._
+import com.kristofszilagyi.utils.LiftedFuture
 import com.kristofszilagyi.utils.UrlOps.RichUri
 import io.circe._
 import io.circe.generic.JsonCodec
 import io.circe.parser.decode
+import slogging.LazyLogging
 
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
@@ -43,10 +45,11 @@ object JenkinsFetcher {
 
   sealed trait Incoming
 
-  final case class Fetch(job: JenkinsJobUrl, replyTo: ActorRef[FetchResult]) extends Incoming
+  final case class Fetch(job: Seq[JenkinsJobUrl], replyTo: ActorRef[BulkFetchResult]) extends Incoming
 
-  private final case class FirstSuccessful(job: JenkinsJobUrl, jobNumbers: Seq[BuildNumber],
-                                           replyTo: ActorRef[FetchResult]) extends Incoming
+  private final case class FirstSuccessful(job: JenkinsJobUrl, jobNumbers: Seq[BuildNumber])
+
+  private final case class FirstSuccessfulBulk(replyTo: ActorRef[BulkFetchResult], results: Seq[Either[FetchResult, JenkinsFetcher.FirstSuccessful]]) extends Incoming
 
   private def restify(u: Uri) = u / "api/json" ? "pretty=true"
 
@@ -57,42 +60,53 @@ object JenkinsFetcher {
   }
 }
 
-class JenkinsFetcher @Inject()(ws: WSClient)(implicit ec: ExecutionContext) {
+class JenkinsFetcher @Inject()(ws: WSClient)(implicit ec: ExecutionContext) extends LazyLogging {
 
   @SuppressWarnings(Array(Wart.Null, Wart.Public)) //I think these are false positive
   val behaviour: Actor.Immutable[Incoming] = Actor.immutable[Incoming] { (ctx, msg) =>
     msg match {
-      case Fetch(job, replyTo) =>
-        val jobUrl = job.uri.toUrl
-        val destination = restify(job.uri)
-        val future = ws.url(destination).get.map(response => safeRead[PartialJenkinsJobInfo](response))
-
-        future onComplete {
-          case Failure(ex) => replyTo ! FetchResult(jobUrl, Left(ResponseError.failedToConnect(ex)))
-          case Success(Left(error)) => replyTo ! FetchResult(jobUrl, Left(error))
-          case Success(Right(jenkinsJobInfo)) => ctx.self ! FirstSuccessful(
-            job,
-            jenkinsJobInfo.builds.map(partialBuildInfo => BuildNumber(partialBuildInfo.number)),
-            replyTo
-          )
-        }
-        Actor.same
-      case FirstSuccessful(job, buildNumbers, replyTo) =>
-        val jobUrl = job.uri.toUrl
-        val liftedFutures = buildNumbers.map { buildNumber =>
-          val destination = restify(job.buildInfo(buildNumber))
-          ws.url(destination).get.map(result => safeRead[PartialDetailedBuildInfo](result)
-            .map{ buildInfo =>
-              val startTime = Instant.ofEpochMilli(buildInfo.timestamp)
-              val endTime = startTime.plusMillis(buildInfo.duration.toLong)
-              JenkinsBuildInfo(buildInfo.result, startTime, endTime, buildNumber)
-            }).lift map {
-              case Failure(exception) => Left(ResponseError.failedToConnect(exception))
-              case Success(value) => value
+      case Fetch(jobs, replyTo) =>
+        val future = LiftedFuture.sequence(jobs.map { job =>
+          val jobUrl = job.uri.toUrl
+          val destination = restify(job.uri)
+          ws.url(destination).get.lift.map {
+            case Success(response) => safeRead[PartialJenkinsJobInfo](response) match {
+              case Left(error) => Left(FetchResult(jobUrl, Left(error)))
+              case Right(jenkinsJobInfo) => Right(FirstSuccessful(
+                job,
+                jenkinsJobInfo.builds.map(partialBuildInfo => BuildNumber(partialBuildInfo.number))
+              ))
+            }
+            case Failure(t) => Left(FetchResult(jobUrl, Left(ResponseError.failedToConnect(t))))
           }
+        }).map(res => FirstSuccessfulBulk(replyTo, res))
+
+        future onComplete { ctx.self ! _ }
+
+        Actor.same
+      case FirstSuccessfulBulk(replyTo, results) =>
+        val futureResults = results.map {
+          case Left(fetchResult) => LiftedFuture.successful(fetchResult)
+          case Right(FirstSuccessful(job, buildNumbers)) =>
+            val jobUrl = job.uri.toUrl
+            val liftedFutures = buildNumbers.map { buildNumber =>
+              val destination = restify(job.buildInfo(buildNumber))
+              ws.url(destination).get.map(result => safeRead[PartialDetailedBuildInfo](result)
+                .map { buildInfo =>
+                  val startTime = Instant.ofEpochMilli(buildInfo.timestamp)
+                  val endTime = startTime.plusMillis(buildInfo.duration.toLong)
+                  JenkinsBuildInfo(buildInfo.result, startTime, endTime, buildNumber)
+                }).lift map {
+                case Failure(exception) => Left(ResponseError.failedToConnect(exception))
+                case Success(value) => value
+              }
+            }
+            LiftedFuture.sequence(liftedFutures) map { buildInfo => //this future can't fail because all the futures are lifted#
+              FetchResult(jobUrl, Right(buildInfo))
+            }
         }
-        Future.sequence(liftedFutures) foreach { buildInfo => //this future can't fail because all the futures are lifted#
-          replyTo ! FetchResult(jobUrl, Right(buildInfo))
+        LiftedFuture.sequence(futureResults) onComplete {
+          replyTo ! BulkFetchResult(_)
         }
         Actor.same
     }

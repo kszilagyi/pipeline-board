@@ -39,7 +39,8 @@ object Settings {
       "com.lihaoyi" %%% "autowire" % autowire,
       "com.beachape" %%% "enumeratum" % enumeratumVersion,
       "com.beachape" %%% "enumeratum-circe" % enumeratumVersion,
-      "com.lihaoyi" %%% "utest" % uTest % Test
+      "com.lihaoyi" %%% "utest" % uTest % Test,
+      "biz.enef" %%% "slogging" % "0.5.2"
     ) ++ Seq(
       "io.circe" %%% "circe-core",
       "io.circe" %%% "circe-generic",
@@ -55,7 +56,8 @@ object Settings {
     "org.webjars" % "bootstrap" % bootstrap % Provided,
     "io.lemonlabs" %% "scala-uri" % "0.4.16",
     "com.typesafe.akka" %% "akka-typed" % "2.5.3",
-     guice, ws
+    "org.slf4j" % "slf4j-simple" % "1.7.+",
+    guice, ws
   ))
 
   /** Dependencies only used by the JS project (note the use of %%% instead of %%) */
@@ -64,7 +66,6 @@ object Settings {
     "com.github.japgolly.scalajs-react" %%% "extra" % scalajsReact,
     "com.github.japgolly.scalacss" %%% "ext-react" % scalaCSS,
     "org.scala-js" %%% "scalajs-dom" % scalaDom,
-    "biz.enef" %%% "slogging" % "0.5.2",
     "com.github.japgolly.scalajs-react" %%% "test" % scalajsReact % "test"
   ))
 

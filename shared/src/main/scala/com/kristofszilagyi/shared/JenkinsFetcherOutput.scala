@@ -21,4 +21,6 @@ object ResponseError {
 
 @JsonCodec final case class FetchResult(request: Url, r: Either[ResponseError, Seq[scala.Either[ResponseError, JenkinsBuildInfo]]])
 
+@JsonCodec final case class BulkFetchResult(results: Seq[FetchResult])
+
 
