@@ -67,6 +67,8 @@ object Settings {
     "com.github.japgolly.scalacss" %%% "ext-react" % scalaCSS,
     "org.scala-js" %%% "scalajs-dom" % scalaDom,
     "com.github.japgolly.scalajs-react" %%% "test" % scalajsReact % "test"
+    //"org.scala-js" %%% "scalajs-java-time" % "0.2.2" //todo why don't we need this?
+
   ))
 
   /** Dependencies for external JS libs that are bundled into a single .js file according to dependency order */

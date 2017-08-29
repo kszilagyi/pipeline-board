@@ -45,7 +45,7 @@ final class MockAutowire extends MockableAutowire {
 
 object TimerTest extends TestSuite{
   val mockTimers = new MockTimers()
-  val TestTimer = Test.timer(mockTimers, new MockAutowire())
+  val TestTimer = Canvas.jobCanvas(mockTimers, new MockAutowire())
 
   def tests = TestSuite {
     'InitialChangeOfValue {
