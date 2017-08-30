@@ -16,6 +16,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.{DurationLong, FiniteDuration}
 import scala.scalajs.js
 import Wart._
+import com.kristofszilagyi.shared.JenkinsBuildStatus.{Aborted, Building, Failed, Successful}
 import org.scalajs.dom.svg.SVG
 
 final case class State(jenkinsState: BulkFetchResult)
@@ -67,7 +68,7 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
     def textBaseLine(idx: Int): Int =  idx * space + first
 
     def backgroundBaseLine(idx: Int): Int = (textBaseLine(idx) - space * spaceContentRatio).toInt
-    val colors = List("red", "green", "blue")
+    val colors = List("white", "yellow", "blue")
     val maxHorizontalBar = 5
     val horizontalBars = (0 to maxHorizontalBar) flatMap { idx =>
       val x = drawAreaWidth / maxHorizontalBar * idx + labelEnd
@@ -134,11 +135,18 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
                 val start = relativeStart * drawAreaWidth
                 val width = Math.max(1, relativeWidth * drawAreaWidth) //todo display these nicely, probably not really a problem
                 //todo header, colors, hovering, zooming, horizontal lines, click
+                val color = run.jenkinsBuildStatus match {
+                  case Building => "black"
+                  case Failed => "red"
+                  case Successful => "green"
+                  case Aborted => "pink"
+                }
                 Some(<.rect(
                   ^.x := (labelEnd + start).toInt,
                   ^.y := (textBaseLine(idx) - space * spaceContentRatio * 0.75 ).toInt,
                   ^.width := width.toInt,
-                  ^.height := (space * spaceContentRatio).toInt
+                  ^.height := (space * spaceContentRatio).toInt,
+                  ^.fill := color
                 ))
               } else
                 None
