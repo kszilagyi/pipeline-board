@@ -1,5 +1,6 @@
 package com.kristofszilagyi
 
+import java.time.format.{DateTimeFormatter, FormatStyle}
 import java.time.temporal.ChronoUnit
 import java.time.{Duration, Instant, ZoneId, ZonedDateTime}
 
@@ -9,6 +10,7 @@ import japgolly.scalajs.react.vdom.svg_<^.{<, _}
 import japgolly.scalajs.react.vdom
 import japgolly.scalajs.react.{BackendScope, Callback, CallbackTo, ScalaComponent}
 import org.scalajs.dom.html.Div
+import ZonedDateTimeOps._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.{DurationLong, FiniteDuration}
@@ -49,7 +51,7 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
 
   private def durationSince(i: Instant, sinceDuration: FiniteDuration): Duration = {
     //todo get proper zone id
-    val dayAgo = ZonedDateTime.now().minusMinutes(sinceDuration.toMinutes).toInstant
+    val dayAgo = (ZonedDateTime.now() - sinceDuration).toInstant
     val duration = Duration.between(dayAgo, i)
     duration
   }
@@ -57,29 +59,69 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
   def render(s: State): TagOf[SVG] = {
     val drawAreaWidth = 1700
     val labelEnd = 300
+    val space = 50
+    val first = 50
+    val spaceContentRatio = 0.75
+    val sinceDuration = 24.hours
+
+    def textBaseLine(idx: Int): Int =  idx * space + first
+
+    def backgroundBaseLine(idx: Int): Int = (textBaseLine(idx) - space * spaceContentRatio).toInt
+    val colors = List("red", "green", "blue")
+    val maxHorizontalBar = 5
+    val horizontalBars = (0 to maxHorizontalBar) flatMap { idx =>
+      val x = drawAreaWidth / maxHorizontalBar * idx + labelEnd
+      val yStart = backgroundBaseLine(0)
+      val yEnd = backgroundBaseLine(0) + s.jenkinsState.results.size * space + 10
+      val timeOnBar = ZonedDateTime.now() - sinceDuration + idx.toDouble / maxHorizontalBar * sinceDuration
+      List(
+        <.line(
+          ^.x1 := x,
+          ^.y1 := yStart,
+          ^.x2 := x,
+          ^.y2 := yEnd,
+          ^.strokeWidth := "1",
+          ^.stroke := "grey"
+        ),
+        <.text(
+          ^.x := x,
+          ^.y := yEnd + 10,
+          ^.textAnchor := "middle",
+          timeOnBar.format(DateTimeFormatter.ofPattern("uuuu-MMM-dd HH:mm"))
+        )
+      )
+    }
+
+
 
     val drawObjs = s.jenkinsState.results.zipWithIndex.flatMap { case (jobState, idx) =>
-      val space = 30
-      val y = idx * space + 15
+
       val label = <.text(
         ^.x := labelEnd,
-        ^.y := y,
+        ^.y := textBaseLine(idx),
         ^.textAnchor := "end",
         ^.fill := "black",
         jobState.request.s
       )
+      val background = <.rect(
+        ^.x := labelEnd,
+        ^.y := backgroundBaseLine(idx),
+        ^.height := space,
+        ^.width := drawAreaWidth,
+        ^.fill := colors(idx % colors.size),
+      )
+
       val rectangles = jobState.r match {
         case Left(err) =>
           List(<.text(
             ^.x := labelEnd,
-            ^.y := y,
+            ^.y := textBaseLine(idx),
             ^.fill := "red",
             err.s
           ))
         case Right(runs) =>
           runs.flatMap(either => either match {
             case Right(run) =>
-              val sinceDuration = 24.hours
               val dayMins = sinceDuration.toMinutes
               val startMin = durationSince(run.buildStart, sinceDuration).toMinutes
               val endMin = durationSince(run.buildFinish, sinceDuration).toMinutes
@@ -94,9 +136,9 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
                 //todo header, colors, hovering, zooming, horizontal lines, click
                 Some(<.rect(
                   ^.x := (labelEnd + start).toInt,
-                  ^.y := y - space/2,
+                  ^.y := (textBaseLine(idx) - space * spaceContentRatio * 0.75 ).toInt,
                   ^.width := width.toInt,
-                  ^.height := space/2
+                  ^.height := (space * spaceContentRatio).toInt
                 ))
               } else
                 None
@@ -106,10 +148,10 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
               None.toList
           })
       }
-      label +: rectangles
+      background +: label +: rectangles
     }
     //todo it doesn't work because instant is not a scalajs objet!
-    val svgParams = drawObjs :+ (^.width := drawAreaWidth + labelEnd) :+ (^.height := 1000)
+    val svgParams = (drawObjs ++ horizontalBars) :+ (^.width := drawAreaWidth + labelEnd) :+ (^.height := 1000)
     <.svg(
       svgParams: _*
     )
