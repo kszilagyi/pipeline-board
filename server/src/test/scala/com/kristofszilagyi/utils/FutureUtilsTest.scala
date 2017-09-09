@@ -11,12 +11,12 @@ import SameThreadExecutionContext._
 object FutureUtilsTest extends TestSuite {
   def tests: Tree[Test] = this{
     'testSucceed {
-      Future.successful(1).lift.value ==> Some(Success(Success(1)))
+      Future.successful(1).lift.value ==> Some(Success(1)) //this does not look lifted because it's a lifted future!
     }
 
     'testFail {
       val x = new RuntimeException("ada")
-      Future.failed(x).lift.value ==> Some(Success(Failure(x)))
+      Future.failed(x).lift.value ==> Some(Failure(x))
     }
   }
 }
