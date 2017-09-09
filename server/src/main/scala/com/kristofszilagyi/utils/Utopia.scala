@@ -8,18 +8,18 @@ import scala.collection.generic.CanBuildFrom
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-object LiftedFuture {
-  def sequence[A, M[X] <: TraversableLike[X, M[X]]](in: M[LiftedFuture[A]])(implicit cbf: CanBuildFrom[M[LiftedFuture[A]], Future[A], M[Future[A]]],
-                                                                            cbf2: CanBuildFrom[M[Future[A]], A, M[A]],
-                                                                      executor: ExecutionContext): LiftedFuture[M[A]] = {
+object Utopia {
+  def sequence[A, M[X] <: TraversableLike[X, M[X]]](in: M[Utopia[A]])(implicit cbf: CanBuildFrom[M[Utopia[A]], Future[A], M[Future[A]]],
+                                                                      cbf2: CanBuildFrom[M[Future[A]], A, M[A]],
+                                                                      executor: ExecutionContext): Utopia[M[A]] = {
     val x = in.map(_.future)
-    new LiftedFuture[M[A]](Future.sequence[A, M](x))
+    new Utopia[M[A]](Future.sequence[A, M](x))
   }
 
-  def successful[T](t: T): LiftedFuture[T] = new LiftedFuture(Future.successful(t))
+  def successful[T](t: T): Utopia[T] = new Utopia(Future.successful(t))
 }
 
-final class LiftedFuture[T](private val future: Future[T]) extends LazyLogging{
+final class Utopia[T](private val future: Future[T]) extends LazyLogging{
   def onComplete[U](f: T => U)(implicit executor: ExecutionContext): Unit = {
     future.onComplete {
       case Success(value) =>
@@ -30,8 +30,8 @@ final class LiftedFuture[T](private val future: Future[T]) extends LazyLogging{
     }
   }
 
-  def map[S](f: T => S)(implicit executor: ExecutionContext): LiftedFuture[S] = {
-    new LiftedFuture(future.map(f))
+  def map[S](f: T => S)(implicit executor: ExecutionContext): Utopia[S] = {
+    new Utopia(future.map(f))
   }
 
   def value: Option[T] = future.value map {

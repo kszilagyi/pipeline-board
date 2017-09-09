@@ -17,7 +17,7 @@ import com.netaporter.uri.Uri
 import com.netaporter.uri.dsl._
 import play.api.libs.ws._
 import TypeSafeEqualsOps._
-import com.kristofszilagyi.utils.LiftedFuture
+import com.kristofszilagyi.utils.Utopia
 import com.kristofszilagyi.utils.UrlOps.RichUri
 import io.circe._
 import io.circe.generic.JsonCodec
@@ -67,7 +67,7 @@ class JenkinsFetcher @Inject()(ws: WSClient)(implicit ec: ExecutionContext) exte
   val behaviour: Actor.Immutable[Incoming] = Actor.immutable[Incoming] { (ctx, msg) =>
     msg match {
       case Fetch(jobs, replyTo) =>
-        val future = LiftedFuture.sequence(jobs.map { job =>
+        val future = Utopia.sequence(jobs.map { job =>
           val jobUrl = job.uri.toUrl
           val destination = restify(job.uri)
           ws.url(destination).get.lift.map {
@@ -87,7 +87,7 @@ class JenkinsFetcher @Inject()(ws: WSClient)(implicit ec: ExecutionContext) exte
         Actor.same
       case FirstSuccessfulBulk(replyTo, results) =>
         val futureResults = results.map {
-          case Left(fetchResult) => LiftedFuture.successful(fetchResult)
+          case Left(fetchResult) => Utopia.successful(fetchResult)
           case Right(FirstSuccessful(job, buildNumbers)) =>
             val jobUrl = job.uri.toUrl
             val liftedFutures = buildNumbers.map { buildNumber =>
@@ -102,11 +102,11 @@ class JenkinsFetcher @Inject()(ws: WSClient)(implicit ec: ExecutionContext) exte
                 case Success(value) => value
               }
             }
-            LiftedFuture.sequence(liftedFutures) map { buildInfo => //this future can't fail because all the futures are lifted#
+            Utopia.sequence(liftedFutures) map { buildInfo => //this future can't fail because all the futures are lifted#
               FetchResult(jobUrl, Right(buildInfo))
             }
         }
-        LiftedFuture.sequence(futureResults) onComplete {
+        Utopia.sequence(futureResults) onComplete {
           replyTo ! BulkFetchResult(_)
         }
         Actor.same

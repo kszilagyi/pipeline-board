@@ -8,7 +8,7 @@ object FutureUtils {
 
   implicit class RichFuture[A](f: Future[A]) {
     //todo unit test
-    def lift(implicit ec: ExecutionContext): LiftedFuture[Try[A]] = new LiftedFuture(
+    def lift(implicit ec: ExecutionContext): Utopia[Try[A]] = new Utopia(
       f transform { t =>
         t match {
           case f: Failure[A] => Success(f)
