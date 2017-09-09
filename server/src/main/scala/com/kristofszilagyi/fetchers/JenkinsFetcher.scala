@@ -30,7 +30,8 @@ import scala.util.{Failure, Success}
 
 @SuppressWarnings(Array(Wart.Public))
 object JenkinsJson { //this object is only here because @JsonCodec has the public wart :(
-  @JsonCodec final case class PartialDetailedBuildInfo(result: JenkinsBuildStatus, timestamp: Long, duration: Int)
+  //todo probably we should have a custom deserializer instead of having an option and do a getOrElse on it
+  @JsonCodec final case class PartialDetailedBuildInfo(result: Option[JenkinsBuildStatus], timestamp: Long, duration: Int)
 
   @JsonCodec final case class PartialBuildInfo(number: Int)
   @JsonCodec final case class PartialJenkinsJobInfo(builds: Seq[PartialBuildInfo])
@@ -95,7 +96,7 @@ class JenkinsFetcher @Inject()(ws: WSClient)(implicit ec: ExecutionContext) exte
                 .map { buildInfo =>
                   val startTime = Instant.ofEpochMilli(buildInfo.timestamp)
                   val endTime = startTime.plusMillis(buildInfo.duration.toLong)
-                  JenkinsBuildInfo(buildInfo.result, startTime, endTime, buildNumber)
+                  JenkinsBuildInfo(buildInfo.result.getOrElse(JenkinsBuildStatus.Building), startTime, endTime, buildNumber)
                 }).lift map {
                 case Failure(exception) => Left(ResponseError.failedToConnect(exception))
                 case Success(value) => value

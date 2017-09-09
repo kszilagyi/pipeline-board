@@ -4,15 +4,22 @@ import io.circe.generic.JsonCodec
 import io.circe.disjunctionCodecs._
 import io.circe.Error
 
+import slogging.LazyLogging
+
 @JsonCodec final case class ResponseError(s: String)
 
-object ResponseError {
+object ResponseError extends LazyLogging{
+  //todo logs not working
   def invalidJson(error: Error): ResponseError = {
-    ResponseError("JsonError: " + error.getMessage)
+    val msg = "JsonError: " + error.getMessage
+    logger.warn(msg)
+    ResponseError(msg)
   }
 
   def failedToConnect(ex: Throwable): ResponseError = {
-    ResponseError("Request failed with exception: " + ex.getMessage)
+    val msg = "Request failed with exception: " + ex.getMessage
+    logger.warn(msg)
+    ResponseError(msg)
   }
 }
 
