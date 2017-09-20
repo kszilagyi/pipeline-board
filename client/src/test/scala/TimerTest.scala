@@ -37,7 +37,7 @@ final class MockTimers extends JsTimers {
 
 final class MockAutowire extends MockableAutowire {
   def dataFeed(): Future[BulkFetchResult] = {
-    Future.successful(BulkFetchResult(List(FetchResult(Url("example.com"),
+    Future.successful(BulkFetchResult(List(JobDetails(Url("example.com"),
       Right(Seq(Right(JenkinsBuildInfo(Successful, Instant.now(), Instant.now(), BuildNumber(1)))))
     ))))
   }

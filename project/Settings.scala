@@ -56,6 +56,7 @@ object Settings {
     "org.webjars" % "bootstrap" % bootstrap % Provided,
     "io.lemonlabs" %% "scala-uri" % "0.4.16",
     "com.typesafe.akka" %% "akka-typed" % "2.5.3",
+    "biz.enef" %% "slogging-slf4j" % "0.5.2",
     "org.slf4j" % "slf4j-simple" % "1.7.+",
     guice, ws
   ))

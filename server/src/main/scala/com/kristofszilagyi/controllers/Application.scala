@@ -9,7 +9,7 @@ import akka.util.{ByteString, Timeout}
 import com.kristofszilagyi.controllers.AutowireServer.throwEither
 import com.kristofszilagyi.fetchers.JenkinsFetcher.Fetch
 import com.kristofszilagyi.fetchers.{JenkinsFetcher, JenkinsJobUrl}
-import com.kristofszilagyi.shared.{AutowireApi, BulkFetchResult, FetchResult, Wart}
+import com.kristofszilagyi.shared.{AutowireApi, BulkFetchResult, JobDetails, Wart}
 import com.netaporter.uri.Uri
 import io.circe.{Decoder, Encoder}
 import play.api.Configuration
