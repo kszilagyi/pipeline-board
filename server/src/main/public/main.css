@@ -1,0 +1,18 @@
+.success {
+    fill: green
+}
+
+.failure {
+    fill: red
+}
+
+.building {
+    fill: black;
+    animation: blinker 2s linear infinite;
+}
+
+@keyframes blinker {
+  from { visibility: hidden }
+  50% { visibility: hidden }
+  to   { visibility: visible }
+}

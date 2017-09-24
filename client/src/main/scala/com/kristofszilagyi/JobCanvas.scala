@@ -17,6 +17,7 @@ import scala.concurrent.duration.{DurationLong, FiniteDuration}
 import scala.scalajs.js
 import Wart._
 import com.kristofszilagyi.shared.JenkinsBuildStatus.{Aborted, Building, Failed, Successful}
+import japgolly.scalajs.react.vdom.PackageBase.VdomAttr
 import org.scalajs.dom.svg.SVG
 
 final case class State(jenkinsState: BulkFetchResult)
@@ -132,35 +133,21 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
                   1.0
                 } else {
                   endRelativeToDrawingAreaBeginning / durationSinceDrawingAreaBeginning
-
                 }
                 val relativeWidthRatio = relativeEndRatio - relativeStartRatio //todo assert if this is negative, also round up to >10?
                 val startPx = relativeStartRatio * jobAreaWidthPx
                 val widthPx = Math.max(1, relativeWidthRatio * jobAreaWidthPx) //todo display these nicely, probably not really a problem
                 //todo header, colors, hovering, zooming, horizontal lines, click
-                val color = run.jenkinsBuildStatus match {
-                  case Building => "black"
-                  case Failed => "red"
-                  case Successful => "green"
-                  case Aborted => "pink"
-                }
-                val animation = if (run.jenkinsBuildStatus ==== Building) {
-                  List(<.animate(
-                    ^.attributeType := "XML",
-                    ^.attributeName := "visibility",
-                    ^.from := "visible",
-                    ^.to := "hidden",
-                    ^.dur := "2000ms",
-                    ^.repeatCount := "indefinite"
-                  ))
-                } else List.empty
-                val params = List(
+
+                def className = VdomAttr("className")
+
+                Some(<.rect(
                   ^.x := (labelEndPx + startPx).toInt,
-                  ^.y := (textBaseLine(idx) - space * spaceContentRatio * 0.75 ).toInt,
+                  ^.y := (textBaseLine(idx) - space * spaceContentRatio * 0.75).toInt,
                   ^.width := widthPx.toInt,
                   ^.height := (space * spaceContentRatio).toInt,
-                  ^.fill := color)
-                Some(<.rect(params ++ animation: _*))
+                  className := run.jenkinsBuildStatus.entryName.toLowerCase)
+                )
               } else
                 None
               buildRectangle.toList
