@@ -22,7 +22,7 @@ import scala.concurrent.duration.DurationInt
 
 class AutowireApiImpl(fetcher: JenkinsFetcher) extends AutowireApi {
   def dataFeed(): Future[BulkFetchResult] = {
-    implicit val timeout: Timeout = Timeout(1.seconds)
+    implicit val timeout: Timeout = Timeout(10.seconds)
     val system: ActorSystem[Fetch] = ActorSystem("Demo", fetcher.behaviour)
     implicit val scheduler: Scheduler = system.scheduler
     system ? { Fetch(
