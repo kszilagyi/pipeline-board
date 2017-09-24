@@ -144,13 +144,23 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
                   case Successful => "green"
                   case Aborted => "pink"
                 }
-                Some(<.rect(
+                val animation = if (run.jenkinsBuildStatus ==== Building) {
+                  List(<.animate(
+                    ^.attributeType := "XML",
+                    ^.attributeName := "visibility",
+                    ^.from := "visible",
+                    ^.to := "hidden",
+                    ^.dur := "2000ms",
+                    ^.repeatCount := "indefinite"
+                  ))
+                } else List.empty
+                val params = List(
                   ^.x := (labelEndPx + startPx).toInt,
                   ^.y := (textBaseLine(idx) - space * spaceContentRatio * 0.75 ).toInt,
                   ^.width := widthPx.toInt,
                   ^.height := (space * spaceContentRatio).toInt,
-                  ^.fill := color
-                ))
+                  ^.fill := color)
+                Some(<.rect(params ++ animation: _*))
               } else
                 None
               buildRectangle.toList
