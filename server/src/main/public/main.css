@@ -11,6 +11,11 @@
     animation: blinker 2s linear infinite;
 }
 
+
+.build_rect:hover {
+  opacity: 0.5
+}
+
 @keyframes blinker {
   from { visibility: hidden }
   50% { visibility: hidden }

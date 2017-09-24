@@ -16,12 +16,12 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.{DurationLong, FiniteDuration}
 import scala.scalajs.js
 import Wart._
+import com.kristofszilagyi.Canvas.className
 import com.kristofszilagyi.shared.JenkinsBuildStatus.{Aborted, Building, Failed, Successful}
 import japgolly.scalajs.react.vdom.PackageBase.VdomAttr
 import org.scalajs.dom.svg.SVG
 
 final case class State(jenkinsState: BulkFetchResult)
-
 
 
 
@@ -136,18 +136,19 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
                 }
                 val relativeWidthRatio = relativeEndRatio - relativeStartRatio //todo assert if this is negative, also round up to >10?
                 val startPx = relativeStartRatio * jobAreaWidthPx
-                val widthPx = Math.max(1, relativeWidthRatio * jobAreaWidthPx) //todo display these nicely, probably not really a problem
+                val widthPx = Math.max(4, relativeWidthRatio * jobAreaWidthPx) //todo display these nicely, probably not really a problem
                 //todo header, colors, hovering, zooming, horizontal lines, click
-
-                def className = VdomAttr("className")
 
                 Some(<.rect(
                   ^.x := (labelEndPx + startPx).toInt,
                   ^.y := (textBaseLine(idx) - space * spaceContentRatio * 0.75).toInt,
                   ^.width := widthPx.toInt,
                   ^.height := (space * spaceContentRatio).toInt,
-                  className := run.jenkinsBuildStatus.entryName.toLowerCase)
-                )
+                  className := s"${run.jenkinsBuildStatus.entryName.toLowerCase} build_rect",
+                  //todo add length
+                  //todo not have ended when building
+                  <.title(s"Id: ${run.buildNumber.i}\nStart: ${run.buildStart}\nFinish: ${run.buildFinish}\nStatus: ${run.jenkinsBuildStatus}")
+                ))
               } else
                 None
               buildRectangle.toList
@@ -168,6 +169,8 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
 }
 
 object Canvas {
+
+  def className = VdomAttr("className")
 
   @SuppressWarnings(Array(Public))
   def jobCanvas(timers: JsTimers, autowire: MockableAutowire)(implicit ec: ExecutionContext) = {
