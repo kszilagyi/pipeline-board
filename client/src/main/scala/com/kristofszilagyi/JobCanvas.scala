@@ -43,6 +43,7 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
     interval = Some(timers.setInterval(30.seconds, {
       tick.runNow()
     }))
+    tick.runNow()
   }
 
   def clear: Callback = Callback {
