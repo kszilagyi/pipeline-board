@@ -1,16 +1,14 @@
 package com.kristofszilagyi.utils
 
-import com.kristofszilagyi.shared.{SThrowable, STry, Wart}
+import com.kristofszilagyi.shared.Wart
 import com.kristofszilagyi.utils.AssertionEx.failEx
-import com.kristofszilagyi.shared.STry.STry
 import slogging.LazyLogging
 
-import scala.language.higherKinds
 import scala.collection.TraversableLike
 import scala.collection.generic.CanBuildFrom
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.control.NonFatal
-import scala.util.{Failure, Success}
+import scala.language.higherKinds
+import scala.util.{Failure, Success, Try}
 
 
 object Utopia extends LazyLogging {
@@ -33,18 +31,18 @@ object Utopia extends LazyLogging {
 
   //this is necessary because the implicit =:= is on the second parameter list therefore the compiler
   //can't infer the type of f (that would be the alternative implementation)
-  implicit class RichTryUtopia[T](utopia: Utopia[STry[T]]) {
+  implicit class RichTryUtopia[T](utopia: Utopia[Try[T]]) {
     @SuppressWarnings(Array(Wart.Overloading))
-    def map[S](f: STry[T] => S)(implicit executor: ExecutionContext): Utopia[STry[S]] = {
+    def map[S](f: Try[T] => S)(implicit executor: ExecutionContext): Utopia[Try[S]] = {
       new Utopia(utopia.unfailableFuture.map{ tryT =>
-        STry(f(tryT))
+        Try(f(tryT))
       })
     }
   }
 
 
   implicit class RichUtopia[T](utopia: Utopia[T]) {
-    def map[S](f: T => S)(implicit executor: ExecutionContext): Utopia[STry[S]] = {
+    def map[S](f: T => S)(implicit executor: ExecutionContext): Utopia[Try[S]] = {
       utopia.unfailableFuture.map(f).lift
     }
 
@@ -59,12 +57,9 @@ object Utopia extends LazyLogging {
 
 
   implicit class RichFuture[A](future: Future[A]) {
-    def lift(implicit ec: ExecutionContext): Utopia[STry[A]] = new Utopia[STry[A]](
+    def lift(implicit ec: ExecutionContext): Utopia[Try[A]] = new Utopia[Try[A]](
       future transform { t =>
-        t match {
-          case Success(s) => Success(Right(s))
-          case Failure(f) => Success(Left(SThrowable.from(f)))
-        }
+        Success(t)
       }
     )
   }

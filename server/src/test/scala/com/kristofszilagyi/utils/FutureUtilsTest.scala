@@ -1,12 +1,12 @@
 package com.kristofszilagyi.utils
 
+import com.kristofszilagyi.utils.SameThreadExecutionContext._
+import com.kristofszilagyi.utils.Utopia.RichFuture
 import utest._
-import com.kristofszilagyi.utils.FutureUtils.RichFuture
+import utest.framework.{Test, Tree}
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
-import utest.framework.{Test, Tree}
-import SameThreadExecutionContext._
 
 object FutureUtilsTest extends TestSuite {
   def tests: Tree[Test] = this{

@@ -3,6 +3,7 @@ package com.kristofszilagyi.shared
 import io.circe.generic.JsonCodec
 import io.circe.Error
 import slogging.LazyLogging
+import io.circe.disjunctionCodecs._
 
 @JsonCodec final case class ResponseError(s: String)
 
@@ -16,12 +17,6 @@ object ResponseError extends LazyLogging{
 
   def failedToConnect(ex: Throwable): ResponseError = {
     val msg = "Request failed with exception: " + ex.getMessage
-    logger.warn(msg)
-    ResponseError(msg)
-  }
-
-  def failedToConnectS(ex: SThrowable): ResponseError = {
-    val msg = "Request failed with exception: " + ex.message
     logger.warn(msg)
     ResponseError(msg)
   }

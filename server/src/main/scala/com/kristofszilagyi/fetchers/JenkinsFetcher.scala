@@ -22,6 +22,7 @@ import io.circe.parser.decode
 import slogging.LazyLogging
 
 import scala.concurrent.ExecutionContext
+import scala.util.{Failure, Success}
 
 @SuppressWarnings(Array(Wart.Public))
 object JenkinsJson { //this object is only here because @JsonCodec has the public wart :(
@@ -66,14 +67,14 @@ class JenkinsFetcher @Inject()(ws: WSClient)(implicit ec: ExecutionContext) exte
           val jobUrl = job.uri.toUrl
           val destination = restify(job.uri)
           ws.url(destination).get.map { safeRead[PartialJenkinsJobInfo] }.lift.noThrowingMap{
-            case Right(maybePartialJenkinsJobInfo) => maybePartialJenkinsJobInfo match {
+            case Success(maybePartialJenkinsJobInfo) => maybePartialJenkinsJobInfo match {
               case Left(error) => Left(JobDetails(jobUrl, Left(error)))
               case Right(jenkinsJobInfo) => Right(JobInfoWithoutBuildInfo(
                 job,
                 jenkinsJobInfo.builds.map(partialBuildInfo => BuildNumber(partialBuildInfo.number))
               ))
             }
-            case Left(t) => Left(JobDetails(jobUrl, Left(ResponseError.failedToConnectS(t))))
+            case Failure(t) => Left(JobDetails(jobUrl, Left(ResponseError.failedToConnect(t))))
           }
         }
 
@@ -97,8 +98,8 @@ class JenkinsFetcher @Inject()(ws: WSClient)(implicit ec: ExecutionContext) exte
                 JenkinsBuildInfo(buildInfo.result.getOrElse(JenkinsBuildStatus.Building), startTime, endTime, buildNumber)
               }
             ).lift noThrowingMap  {
-              case Left(exception) => Left(ResponseError.failedToConnectS(exception))
-              case Right(value) => value
+              case Failure(exception) => Left(ResponseError.failedToConnect(exception))
+              case Success(value) => value
             }
           }
           Utopia.sequence(buildInfoFutures) noThrowingMap { buildInfo =>
