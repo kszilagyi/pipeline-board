@@ -11,6 +11,10 @@
     animation: blinker 2s linear infinite;
 }
 
+.aborted {
+    fill: purple;
+}
+
 
 .build_rect:hover {
   opacity: 0.5
