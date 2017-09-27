@@ -1,33 +1,28 @@
 package com.kristofszilagyi
 
-import java.time.format.{DateTimeFormatter, FormatStyle}
-import java.time.temporal.ChronoUnit
-import java.time.{Duration, Instant, ZoneId, ZonedDateTime}
-import com.kristofszilagyi.shared.TypeSafeEqualsOps._
-import com.kristofszilagyi.shared._
-import japgolly.scalajs.react
-import japgolly.scalajs.react.vdom.{HtmlStyles, TagOf}
-import japgolly.scalajs.react.vdom.svg_<^.{<, _}
-import japgolly.scalajs.react.{BackendScope, Callback, CallbackTo, ReactExt_ReactEvent, ScalaComponent, vdom}
-import org.scalajs.dom.html.Div
-import ZonedDateTimeOps._
-import InstantOps._
-import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration.{DurationInt, FiniteDuration}
-import scala.scalajs.js
-import Wart._
+import java.time.format.DateTimeFormatter
+import java.time.{Instant, ZoneId}
+
 import com.kristofszilagyi.Canvas.className
-import com.kristofszilagyi.shared.JenkinsBuildStatus.{Aborted, Building, Failed, Successful}
+import com.kristofszilagyi.shared.JenkinsBuildStatus.Building
+import com.kristofszilagyi.shared.TypeSafeEqualsOps._
+import com.kristofszilagyi.shared.Wart._
+import com.kristofszilagyi.shared.ZonedDateTimeOps._
+import com.kristofszilagyi.shared._
 import japgolly.scalajs.react.raw.SyntheticWheelEvent
-import japgolly.scalajs.react.vdom.Attr.Event
 import japgolly.scalajs.react.vdom.PackageBase.VdomAttr
+import japgolly.scalajs.react.vdom.TagOf
+import japgolly.scalajs.react.vdom.svg_<^.{<, _}
+import japgolly.scalajs.react.{BackendScope, Callback, CallbackTo, ScalaComponent, vdom}
 import org.scalajs.dom.raw.SVGElement
 import org.scalajs.dom.svg.SVG
+import InstantOps._
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration.Infinite
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.scalajs.js
 
-final case class State(jenkinsState: BulkFetchResult, drawingAreaDuration: FiniteDuration)
-
-
+final case class State(jenkinsState: BulkFetchResult, drawingAreaDuration: FiniteDuration, endTime: Instant)
 
 final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireApi: MockableAutowire)
                      (implicit ec: ExecutionContext) {
@@ -48,13 +43,12 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
 
   def adjustZoomLevel(delta: Double): CallbackTo[Unit] = {
     $.modState(s => {
-      val to10Percent = (1 + Math.abs(delta) / 530)
+      val to10Percent = 1 + Math.abs(delta) / 530
       val signedTo10Percent = if (delta > 0) {
         to10Percent
       } else {
         1 / to10Percent
       }
-      println(to10Percent)
       val maxDuration = 365.days
       val newDuration = s.drawingAreaDuration * signedTo10Percent match {
         case _: Infinite => maxDuration
@@ -89,13 +83,13 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
     def backgroundBaseLine(idx: Int): Int = (textBaseLine(idx) - space * spaceContentRatio).toInt
     val colors = List("white", "yellow", "blue")
     val maxHorizontalBar = 5
-    val now = ZonedDateTime.now()
+    //val now = ZonedDateTime.now()
 
     val verticleLines = (0 to maxHorizontalBar) flatMap { idx =>
       val x = jobAreaWidthPx / maxHorizontalBar * idx + labelEndPx
       val yStart = backgroundBaseLine(0)
       val yEnd = backgroundBaseLine(0) + s.jenkinsState.results.size * space + 10
-      val timeOnBar = now - drawingAreaDuration + idx.toDouble / maxHorizontalBar * drawingAreaDuration
+      val timeOnBar = s.endTime.atZone(ZoneId.systemDefault()) - drawingAreaDuration + idx.toDouble / maxHorizontalBar * drawingAreaDuration
       List(
         <.line(
           ^.x1 := x,
@@ -133,8 +127,8 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
         ^.fill := colors(idx % colors.size),
       )
 
-      val drawingAreaBeginning = (now - drawingAreaDuration).toInstant
-      val durationSinceDrawingAreaBeginning = now.toInstant - drawingAreaBeginning
+      val drawingAreaBeginning = s.endTime - drawingAreaDuration
+      val durationSinceDrawingAreaBeginning = s.endTime - drawingAreaBeginning
 
       val jobRectangles = jobState.r match {
         case Left(err) =>
@@ -183,7 +177,6 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
       }
       background +: label +: jobRectangles
     }
-    //todo it doesn't work because instant is not a scalajs objet!
     val rightMargin = 100
     val mouseListeners = vdom.html_<^.^.onWheel ==> handleSubmit
     val svgParams = (drawObjs ++ verticleLines) :+ (^.width := jobAreaWidthPx + labelEndPx + rightMargin) :+ (^.height := 1000) :+ mouseListeners
@@ -204,7 +197,7 @@ object Canvas {
   @SuppressWarnings(Array(Public))
   def jobCanvas(timers: JsTimers, autowire: MockableAutowire)(implicit ec: ExecutionContext) = {
     ScalaComponent.builder[Unit]("Timer")
-      .initialState(State(BulkFetchResult(Seq.empty), drawingAreaDuration = 1.days))
+      .initialState(State(BulkFetchResult(Seq.empty), drawingAreaDuration = 1.days, Instant.now()))
       .backend(new JobCanvas(_, timers, autowire))
       .renderS(_.backend.render(_))
       .componentDidMount(_.backend.start)
