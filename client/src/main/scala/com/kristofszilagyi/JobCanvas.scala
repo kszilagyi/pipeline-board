@@ -5,23 +5,27 @@ import java.time.temporal.ChronoUnit
 import java.time.{Duration, Instant, ZoneId, ZonedDateTime}
 import com.kristofszilagyi.shared.TypeSafeEqualsOps._
 import com.kristofszilagyi.shared._
+import japgolly.scalajs.react
 import japgolly.scalajs.react.vdom.{HtmlStyles, TagOf}
 import japgolly.scalajs.react.vdom.svg_<^.{<, _}
-import japgolly.scalajs.react.vdom
-import japgolly.scalajs.react.{BackendScope, Callback, CallbackTo, ScalaComponent}
+import japgolly.scalajs.react.{BackendScope, Callback, CallbackTo, ReactExt_ReactEvent, ScalaComponent, vdom}
 import org.scalajs.dom.html.Div
 import ZonedDateTimeOps._
 import InstantOps._
 import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration.{DurationLong, FiniteDuration}
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.scalajs.js
 import Wart._
 import com.kristofszilagyi.Canvas.className
 import com.kristofszilagyi.shared.JenkinsBuildStatus.{Aborted, Building, Failed, Successful}
+import japgolly.scalajs.react.raw.SyntheticWheelEvent
+import japgolly.scalajs.react.vdom.Attr.Event
 import japgolly.scalajs.react.vdom.PackageBase.VdomAttr
+import org.scalajs.dom.raw.SVGElement
 import org.scalajs.dom.svg.SVG
+import scala.concurrent.duration.Duration.Infinite
 
-final case class State(jenkinsState: BulkFetchResult)
+final case class State(jenkinsState: BulkFetchResult, drawingAreaDuration: FiniteDuration)
 
 
 
@@ -32,12 +36,32 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
 
   def tick: CallbackTo[Unit] = Callback.future {
     autowireApi.dataFeed().map { jenkinsState =>
-      setState(jenkinsState)
+      setJenkinsState(jenkinsState)
     }
   }
 
-  def setState(jenkinsState: BulkFetchResult): CallbackTo[Unit] = {
-    Callback.log("setState") >> $.setState(State(jenkinsState))
+  def setJenkinsState(jenkinsState: BulkFetchResult): CallbackTo[Unit] = {
+    $.modState(s => {
+      s.copy(jenkinsState = jenkinsState)
+    })
+  }
+
+  def adjustZoomLevel(delta: Double): CallbackTo[Unit] = {
+    $.modState(s => {
+      val to10Percent = (1 + Math.abs(delta) / 530)
+      val signedTo10Percent = if (delta > 0) {
+        to10Percent
+      } else {
+        1 / to10Percent
+      }
+      println(to10Percent)
+      val maxDuration = 365.days
+      val newDuration = s.drawingAreaDuration * signedTo10Percent match {
+        case _: Infinite => maxDuration
+        case f: FiniteDuration => f
+      }
+      s.copy(drawingAreaDuration = 1.hour.max(newDuration).min(maxDuration))
+    })
   }
 
   def start: Callback = Callback {
@@ -58,7 +82,7 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
     val space = 50
     val first = 50
     val spaceContentRatio = 0.75
-    val drawingAreaDuration = 24.hours
+    import s.drawingAreaDuration
 
     def textBaseLine(idx: Int): Int =  idx * space + first
 
@@ -161,10 +185,15 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
     }
     //todo it doesn't work because instant is not a scalajs objet!
     val rightMargin = 100
-    val svgParams = (drawObjs ++ verticleLines) :+ (^.width := jobAreaWidthPx + labelEndPx + rightMargin) :+ (^.height := 1000)
+    val mouseListeners = vdom.html_<^.^.onWheel ==> handleSubmit
+    val svgParams = (drawObjs ++ verticleLines) :+ (^.width := jobAreaWidthPx + labelEndPx + rightMargin) :+ (^.height := 1000) :+ mouseListeners
     <.svg(
       svgParams: _*
     )
+  }
+  def handleSubmit(e: SyntheticWheelEvent[SVGElement]): CallbackTo[Unit] = {
+   e.stopPropagationCB >> e.preventDefaultCB >>
+      adjustZoomLevel(e.deltaY)
   }
 }
 
@@ -175,7 +204,7 @@ object Canvas {
   @SuppressWarnings(Array(Public))
   def jobCanvas(timers: JsTimers, autowire: MockableAutowire)(implicit ec: ExecutionContext) = {
     ScalaComponent.builder[Unit]("Timer")
-      .initialState(State(BulkFetchResult(Seq.empty)))
+      .initialState(State(BulkFetchResult(Seq.empty), drawingAreaDuration = 1.days))
       .backend(new JobCanvas(_, timers, autowire))
       .renderS(_.backend.render(_))
       .componentDidMount(_.backend.start)
