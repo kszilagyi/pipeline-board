@@ -9,7 +9,7 @@ import com.kristofszilagyi.shared.TypeSafeEqualsOps._
 import com.kristofszilagyi.shared.Wart._
 import com.kristofszilagyi.shared.ZonedDateTimeOps._
 import com.kristofszilagyi.shared._
-import japgolly.scalajs.react.raw.SyntheticWheelEvent
+import japgolly.scalajs.react.raw.{SyntheticDragEvent, SyntheticMouseEvent, SyntheticWheelEvent}
 import japgolly.scalajs.react.vdom.PackageBase.VdomAttr
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.svg_<^.{<, _}
@@ -17,15 +17,18 @@ import japgolly.scalajs.react.{BackendScope, Callback, CallbackTo, ScalaComponen
 import org.scalajs.dom.raw.SVGElement
 import org.scalajs.dom.svg.SVG
 import InstantOps._
+import slogging.LazyLogging
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration.Infinite
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.scalajs.js
 
-final case class State(jenkinsState: BulkFetchResult, drawingAreaDuration: FiniteDuration, endTime: Instant)
+final case class State(jenkinsState: BulkFetchResult, drawingAreaDuration: FiniteDuration,
+                       endTime: Instant, mouseDownY: Option[Int], endTimeAtMouseDown: Instant)
 
 final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireApi: MockableAutowire)
-                     (implicit ec: ExecutionContext) {
+                     (implicit ec: ExecutionContext) extends LazyLogging {
   @SuppressWarnings(Array(Var))
   private var interval: Option[js.timers.SetIntervalHandle] = None
 
@@ -58,6 +61,28 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
     })
   }
 
+  private val jobAreaWidthPx = 1600
+
+  def adjustEndTime(delta: Int): CallbackTo[Unit] = {
+    $.modState(s => {
+      println(delta)
+      val timeDelta = (delta.toDouble / jobAreaWidthPx) * s.drawingAreaDuration match {
+        case _: Infinite => 0.seconds
+        case f: FiniteDuration => f
+      }
+      val validatedEnd = {
+        val newEnd = s.endTimeAtMouseDown + timeDelta
+        val now = Instant.now
+        if (newEnd.isAfter(now)) {
+          now
+        } else {
+          newEnd
+        }
+      }
+      s.copy(endTime = validatedEnd)
+    })
+  }
+
   def start: Callback = Callback {
     interval = Some(timers.setInterval(30.seconds, {
       tick.runNow()
@@ -71,7 +96,7 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
   }
 
   def render(s: State): TagOf[SVG] = {
-    val jobAreaWidthPx = 1600
+
     val labelEndPx = 300
     val space = 50
     val first = 50
@@ -165,6 +190,7 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
                   className := s"${run.jenkinsBuildStatus.entryName.toLowerCase} build_rect",
                   //todo add length
                   //todo not have ended when building
+                  //todo replace this with jQuery or sg similar and make it pop up immediately not after delay and not browser dependent way
                   <.title(s"Id: ${run.buildNumber.i}\nStart: ${run.buildStart}\nFinish: ${run.buildFinish}\nStatus: ${run.jenkinsBuildStatus}")
                 ))
               } else
@@ -178,8 +204,13 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
       background +: label +: jobRectangles
     }
     val rightMargin = 100
-    val mouseListeners = vdom.html_<^.^.onWheel ==> handleSubmit
-    val svgParams = (drawObjs ++ verticleLines) :+ (^.width := jobAreaWidthPx + labelEndPx + rightMargin) :+ (^.height := 1000) :+ mouseListeners
+    val wheelListener = vdom.html_<^.^.onWheel ==> handleSubmit
+    val dragListeners = List(vdom.html_<^.^.onMouseDown ==> handleDown,
+      vdom.html_<^.^.onMouseMove ==> handleMove,
+      vdom.html_<^.^.onMouseUp ==> handleUp,
+    )
+    val svgParams = (drawObjs ++ verticleLines ++ dragListeners) :+ (^.width := jobAreaWidthPx + labelEndPx + rightMargin) :+
+      (^.height := 1000) :+ wheelListener
     <.svg(
       svgParams: _*
     )
@@ -187,6 +218,28 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
   def handleSubmit(e: SyntheticWheelEvent[SVGElement]): CallbackTo[Unit] = {
    e.stopPropagationCB >> e.preventDefaultCB >>
       adjustZoomLevel(e.deltaY)
+  }
+
+  def handleDown(e: SyntheticMouseEvent[SVGElement]): CallbackTo[Unit] = {
+    val x = e.clientX.toInt //this is mutable, so need to get it
+    e.stopPropagationCB >> e.preventDefaultCB >> //todo enable copying of text
+    $.modState(s => s.copy(mouseDownY = Some(x), endTimeAtMouseDown = s.endTime))
+  }
+
+  def handleMove(e: SyntheticMouseEvent[SVGElement]): CallbackTo[Unit] = {
+    val x = e.clientX.toInt //this is mutable, so need to get it
+    $.state.flatMap { s =>
+      s.mouseDownY.map(_ - x) match {
+        case Some(deltaX) => adjustEndTime(deltaX)
+        case None => CallbackTo(())
+      }
+    }
+
+  }
+
+  def handleUp(e: SyntheticMouseEvent[SVGElement]): CallbackTo[Unit] = {
+    val _ = e
+    $.modState(s => s.copy(mouseDownY = None))
   }
 }
 
@@ -197,7 +250,8 @@ object Canvas {
   @SuppressWarnings(Array(Public))
   def jobCanvas(timers: JsTimers, autowire: MockableAutowire)(implicit ec: ExecutionContext) = {
     ScalaComponent.builder[Unit]("Timer")
-      .initialState(State(BulkFetchResult(Seq.empty), drawingAreaDuration = 1.days, Instant.now()))
+      .initialState(State(BulkFetchResult(Seq.empty), drawingAreaDuration = 1.days,
+        Instant.now(), mouseDownY = None, endTimeAtMouseDown = Instant.now))
       .backend(new JobCanvas(_, timers, autowire))
       .renderS(_.backend.render(_))
       .componentDidMount(_.backend.start)

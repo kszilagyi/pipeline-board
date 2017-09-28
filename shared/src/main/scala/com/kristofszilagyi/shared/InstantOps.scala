@@ -16,5 +16,9 @@ object InstantOps {
     def -(duration: FiniteDuration): Instant = {
       instant.minusNanos(duration.toNanos)
     }
+
+    def +(duration: FiniteDuration): Instant = {
+      instant.plusNanos(duration.toNanos)
+    }
   }
 }
