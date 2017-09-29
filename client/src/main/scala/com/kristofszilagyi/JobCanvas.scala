@@ -223,6 +223,7 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
   def handleDown(e: SyntheticMouseEvent[SVGElement]): CallbackTo[Unit] = {
     val x = e.clientX.toInt //this is mutable, so need to get it
     e.stopPropagationCB >> e.preventDefaultCB >> //todo enable copying of text
+      Callback { org.scalajs.dom.document.body.style.cursor = "all-scroll" } >>
     $.modState(s => s.copy(mouseDownY = Some(x), endTimeAtMouseDown = s.endTime))
   }
 
@@ -234,12 +235,12 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
         case None => CallbackTo(())
       }
     }
-
   }
 
   def handleUp(e: SyntheticMouseEvent[SVGElement]): CallbackTo[Unit] = {
     val _ = e
-    $.modState(s => s.copy(mouseDownY = None))
+    Callback { org.scalajs.dom.document.body.style.cursor = "auto" } >>
+      $.modState(s => s.copy(mouseDownY = None))
   }
 }
 
