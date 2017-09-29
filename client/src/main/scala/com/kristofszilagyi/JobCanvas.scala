@@ -106,7 +106,7 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
     def textBaseLine(idx: Int): Int =  idx * space + first
 
     def backgroundBaseLine(idx: Int): Int = (textBaseLine(idx) - space * spaceContentRatio).toInt
-    val colors = List("white", "yellow", "blue")
+    val colors = List("black", "darkslategrey")
     val maxHorizontalBar = 5
     //val now = ZonedDateTime.now()
 
@@ -166,11 +166,13 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
         case Right(runs) =>
           runs.flatMap(either => either match {
             case Right(run) =>
-              val startRelativeToDrawingAreaBeginning = run.buildStart - drawingAreaBeginning
-              val endRelativeToDrawingAreaBeginning = run.buildFinish - drawingAreaBeginning
+              val startRelativeToDrawingAreaBeginning = (run.buildStart - drawingAreaBeginning).max(0.seconds)
+              val endRelativeToDrawingAreaBeginning = (run.buildFinish - drawingAreaBeginning).min(durationSinceDrawingAreaBeginning)
               //todo deal with more than a day longer
               //todo deal with partially inside
-              val buildRectangle = if (startRelativeToDrawingAreaBeginning.toNanos > 0) {
+              val buildRectangle = if (endRelativeToDrawingAreaBeginning.toNanos > 0 &&
+                  startRelativeToDrawingAreaBeginning < durationSinceDrawingAreaBeginning) {
+
                 val relativeStartRatio = startRelativeToDrawingAreaBeginning / durationSinceDrawingAreaBeginning
                 val relativeEndRatio = if (run.jenkinsBuildStatus ==== Building) {
                   1.0
@@ -179,6 +181,7 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
                 }
                 val relativeWidthRatio = relativeEndRatio - relativeStartRatio //todo assert if this is negative, also round up to >10?
                 val startPx = relativeStartRatio * jobAreaWidthPx
+                //todo this will go out of the drawing area, fix
                 val widthPx = Math.max(4, relativeWidthRatio * jobAreaWidthPx) //todo display these nicely, probably not really a problem
                 //todo header, colors, hovering, zooming, horizontal lines, click
 
