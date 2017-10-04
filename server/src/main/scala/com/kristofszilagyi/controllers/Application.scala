@@ -26,11 +26,21 @@ class AutowireApiImpl(fetcher: JenkinsFetcher) extends AutowireApi {
     val system: ActorSystem[Fetch] = ActorSystem("Demo", fetcher.behaviour)
     implicit val scheduler: Scheduler = system.scheduler
     system ? { Fetch(
+      //todo create different jobs
       List(JenkinsJobUrl(Uri.parse("http://localhost:8080/job/Other%20stuff")),
         JenkinsJobUrl(Uri.parse("http://localhost:8080/job/One%20stuff")),
         JenkinsJobUrl(Uri.parse("http://localhost:8080/job/Slow%20stuff")),
+        JenkinsJobUrl(Uri.parse("http://localhost:8080/job/Other%20stuff")),
+        JenkinsJobUrl(Uri.parse("http://localhost:8080/job/One%20stuff")),
+        JenkinsJobUrl(Uri.parse("http://localhost:8080/job/Slow%20stuff")),
+        JenkinsJobUrl(Uri.parse("http://localhost:8080/job/Other%20stuff")),
+        JenkinsJobUrl(Uri.parse("http://localhost:8080/job/One%20stuff")),
+        JenkinsJobUrl(Uri.parse("http://localhost:8080/job/Slow%20stuff")),
+        JenkinsJobUrl(Uri.parse("http://localhost:8080/job/Other%20stuff")),
+        JenkinsJobUrl(Uri.parse("http://localhost:8080/job/One%20stuff")),
+        JenkinsJobUrl(Uri.parse("http://localhost:8080/job/Slow%20stuff"))
       ),
-      _
+      _//todo old jobs do not show up on the rest API (just the 100 newest)
       )}
   }
 }

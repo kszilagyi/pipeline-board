@@ -246,7 +246,8 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
       $.modState(s => s.copy(mouseDownY = None))
   }
 }
-
+//todo I have no sense of unit: there should be different horizontal lines with different color
+// which signal minutes, hours, days, weeks. months
 object Canvas {
 
   def className = VdomAttr("className")
