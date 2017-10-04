@@ -138,17 +138,18 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
       )
     }
 
-
-
-    val drawObjs = s.jenkinsState.results.zipWithIndex.flatMap { case (jobState, idx) =>
-
-      val label = <.text(
+    val labels = s.jenkinsState.results.zipWithIndex.map { case (jobState, idx) =>
+      <.text(
         ^.x := labelEndPx,
         ^.y := textBaseLine(idx),
         ^.textAnchor := "end",
         ^.fill := "black",
         jobState.request.s
       )
+    }
+
+    val drawObjs = s.jenkinsState.results.zipWithIndex.flatMap { case (jobState, idx) =>
+
       val background = <.rect(
         ^.x := labelEndPx,
         ^.y := backgroundBaseLine(idx),
@@ -209,7 +210,7 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
               None.toList
           })
       }
-      background +: label +: jobRectangles
+      background +: jobRectangles
     }
     val rightMargin = 100
     val wheelListener = html_<^.^.onWheel ==> handleSubmit
@@ -217,8 +218,10 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
       html_<^.^.onMouseMove ==> handleMove,
       html_<^.^.onMouseUp ==> handleUp,
     )
-    val svgParams = (drawObjs ++ verticleLines ++ dragListeners) :+ (^.width := jobAreaWidthPx + labelEndPx + rightMargin) :+
-      (^.height := 1000) :+ wheelListener
+
+    val groupedDrawObjs = <.g((drawObjs ++ dragListeners) :+ wheelListener: _*)
+    val svgParams = (labels :+ (^.width := jobAreaWidthPx + labelEndPx + rightMargin) :+
+      (^.height := 1000) :+ groupedDrawObjs) ++ verticleLines
     val checkboxId = "follow"
     html_<^.<.div(html_<^.<input(html_<^.^.id := checkboxId, html_<^.^.`type` := "checkbox", html_<^.^.checked := s.followTime),
       html_<^.<.label(html_<^.^.`for` := checkboxId, "Follow"),
