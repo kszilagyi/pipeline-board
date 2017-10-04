@@ -11,12 +11,13 @@ import com.kristofszilagyi.shared.ZonedDateTimeOps._
 import com.kristofszilagyi.shared._
 import japgolly.scalajs.react.raw.{SyntheticDragEvent, SyntheticMouseEvent, SyntheticWheelEvent}
 import japgolly.scalajs.react.vdom.PackageBase.VdomAttr
-import japgolly.scalajs.react.vdom.TagOf
+import japgolly.scalajs.react.vdom._
 import japgolly.scalajs.react.vdom.svg_<^.{<, _}
 import japgolly.scalajs.react.{BackendScope, Callback, CallbackTo, ScalaComponent, vdom}
-import org.scalajs.dom.raw.SVGElement
+import org.scalajs.dom.raw.{Element, SVGElement}
 import org.scalajs.dom.svg.SVG
 import InstantOps._
+import org.scalajs.dom.html.Div
 import slogging.LazyLogging
 
 import scala.concurrent.ExecutionContext
@@ -25,14 +26,18 @@ import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.scalajs.js
 
 final case class State(jenkinsState: BulkFetchResult, drawingAreaDuration: FiniteDuration,
-                       endTime: Instant, mouseDownY: Option[Int], endTimeAtMouseDown: Instant)
+                       endTime: Instant, mouseDownY: Option[Int], endTimeAtMouseDown: Instant, followTime: Boolean)
 
 final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireApi: MockableAutowire)
                      (implicit ec: ExecutionContext) extends LazyLogging {
   @SuppressWarnings(Array(Var))
   private var interval: Option[js.timers.SetIntervalHandle] = None
 
-  def tick: CallbackTo[Unit] = Callback.future {
+  def tick: CallbackTo[Unit] = $.modState{ s =>
+    if (s.followTime) {
+      s.copy(endTime = Instant.now)
+    } else s
+  } >> Callback.future {
     autowireApi.dataFeed().map { jenkinsState =>
       setJenkinsState(jenkinsState)
     }
@@ -79,7 +84,7 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
           newEnd
         }
       }
-      s.copy(endTime = validatedEnd)
+      s.copy(endTime = validatedEnd, followTime = false)
     })
   }
 
@@ -95,7 +100,7 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
     interval = None
   }
 
-  def render(s: State): TagOf[SVG] = {
+  def render(s: State): TagOf[Div] = {
 
     val labelEndPx = 300
     val space = 50
@@ -207,15 +212,19 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
       background +: label +: jobRectangles
     }
     val rightMargin = 100
-    val wheelListener = vdom.html_<^.^.onWheel ==> handleSubmit
-    val dragListeners = List(vdom.html_<^.^.onMouseDown ==> handleDown,
-      vdom.html_<^.^.onMouseMove ==> handleMove,
-      vdom.html_<^.^.onMouseUp ==> handleUp,
+    val wheelListener = html_<^.^.onWheel ==> handleSubmit
+    val dragListeners = List(html_<^.^.onMouseDown ==> handleDown,
+      html_<^.^.onMouseMove ==> handleMove,
+      html_<^.^.onMouseUp ==> handleUp,
     )
     val svgParams = (drawObjs ++ verticleLines ++ dragListeners) :+ (^.width := jobAreaWidthPx + labelEndPx + rightMargin) :+
       (^.height := 1000) :+ wheelListener
-    <.svg(
-      svgParams: _*
+    val checkboxId = "follow"
+    html_<^.<.div(html_<^.<input(html_<^.^.id := checkboxId, html_<^.^.`type` := "checkbox", html_<^.^.checked := s.followTime),
+      html_<^.<.label(html_<^.^.`for` := checkboxId, "Follow"),
+      <.svg(
+        svgParams: _*
+      )
     )
   }
   def handleSubmit(e: SyntheticWheelEvent[SVGElement]): CallbackTo[Unit] = {
@@ -223,6 +232,7 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
       adjustZoomLevel(e.deltaY)
   }
 
+  //todo make these only work on the drawing area
   def handleDown(e: SyntheticMouseEvent[SVGElement]): CallbackTo[Unit] = {
     val x = e.clientX.toInt //this is mutable, so need to get it
     e.stopPropagationCB >> e.preventDefaultCB >> //todo enable copying of text
@@ -256,7 +266,7 @@ object Canvas {
   def jobCanvas(timers: JsTimers, autowire: MockableAutowire)(implicit ec: ExecutionContext) = {
     ScalaComponent.builder[Unit]("Timer")
       .initialState(State(BulkFetchResult(Seq.empty), drawingAreaDuration = 1.days,
-        Instant.now(), mouseDownY = None, endTimeAtMouseDown = Instant.now))
+        Instant.now(), mouseDownY = None, endTimeAtMouseDown = Instant.now, followTime = true))
       .backend(new JobCanvas(_, timers, autowire))
       .renderS(_.backend.render(_))
       .componentDidMount(_.backend.start)
