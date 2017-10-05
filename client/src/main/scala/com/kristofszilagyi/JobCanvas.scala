@@ -3,7 +3,7 @@ package com.kristofszilagyi
 import java.time.{Instant, ZoneId}
 
 import com.kristofszilagyi.Canvas.className
-import com.kristofszilagyi.RenderUtils.{atX, verticalLines}
+import com.kristofszilagyi.RenderUtils.{atPosition, strip, verticalLines}
 import com.kristofszilagyi.shared.InstantOps._
 import com.kristofszilagyi.shared.JenkinsBuildStatus.Building
 import com.kristofszilagyi.shared.TypeSafeEqualsOps._
@@ -106,15 +106,18 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
     val spaceContentRatio = 0.75
     import s.drawingAreaDuration
 
-    def textBaseLine(idx: Int): Int =  idx * space + first
+    def textBaseLine(idx: Int): Int = idx * space + first
 
     def backgroundBaseLine(idx: Int): Int = (textBaseLine(idx) - space * spaceContentRatio).toInt
     val colors = List("black", "darkslategrey")
 
-    val verticleLines = atX(labelEndPx, verticalLines(jobAreaWidthPx = jobAreaWidthPx,
-      backgroundBaseLine = backgroundBaseLine, numberOfJobs = s.jenkinsState.results.size,
-      jobHeight = space, endTime = s.endTime, drawingAreaDuration = drawingAreaDuration,
-      timeZone = ZoneId.systemDefault()))
+    val verticleLines = atPosition(
+      x = labelEndPx,
+      elements = verticalLines(jobAreaWidthPx = jobAreaWidthPx,
+        backgroundBaseLine = backgroundBaseLine, numberOfJobs = s.jenkinsState.results.size,
+        jobHeight = space, endTime = s.endTime, drawingAreaDuration = drawingAreaDuration,
+        timeZone = ZoneId.systemDefault())
+    )
 
     val labels = s.jenkinsState.results.zipWithIndex.map { case (jobState, idx) =>
       <.text(
@@ -128,12 +131,9 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
 
     val drawObjs = s.jenkinsState.results.zipWithIndex.flatMap { case (jobState, idx) =>
 
-      val background = <.rect(
-        ^.x := labelEndPx,
-        ^.y := backgroundBaseLine(idx),
-        ^.height := space,
-        ^.width := jobAreaWidthPx,
-        ^.fill := colors(idx % colors.size),
+      val background = atPosition(
+        x = labelEndPx, y = backgroundBaseLine(idx),
+        elements = List(strip(jobAreaWidthPx = jobAreaWidthPx, stripHeight = space, colors(idx % colors.size), List.empty))
       )
 
       val drawingAreaBeginning = s.endTime - drawingAreaDuration
