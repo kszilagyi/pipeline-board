@@ -3,14 +3,14 @@ package com.kristofszilagyi
 import java.time.Instant
 
 import com.kristofszilagyi.shared.JenkinsBuildStatus.Successful
+import com.kristofszilagyi.shared.SameThreadExecutionContext._
 import com.kristofszilagyi.shared._
-import japgolly.scalajs.react.test.{ReactTestExt_MountedId, ReactTestUtils}
+import japgolly.scalajs.react.test.ReactTestUtils
 import utest._
-
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 import scala.scalajs.js.timers.SetIntervalHandle
-import com.kristofszilagyi.shared.SameThreadExecutionContext._
+
 final class MockTimers extends JsTimers {
   private val counter = Iterator.from(0)
 

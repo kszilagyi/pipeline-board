@@ -46,6 +46,7 @@ val customScalacOptionsWoUnusedParams = Seq(
   "-Ywarn-value-discard"               // Warn when non-Unit expression results are unused.
 
 )
+val unusedImports = "-Ywarn-unused:imports"
 
 
 lazy val customScalacOptions = customScalacOptionsWoUnusedParams ++ unusedParams
@@ -82,7 +83,7 @@ lazy val shared = (crossProject.crossType(CrossType.Pure) in file("shared"))
     scalahostSettings,
     libraryDependencies ++= Settings.sharedDependencies.value,
     cancelable in Global := true,
-    commonSettings(customScalacOptions)
+    commonSettings(customScalacOptions :+ unusedImports)
 
   )
   // set up settings specific to the JS project
@@ -129,7 +130,7 @@ lazy val client: Project = (project in file("client"))
     // use Scala.js provided launcher code to start the client app
     scalaJSUseMainModuleInitializer := true,
     scalaJSUseMainModuleInitializer in Test := false,
-    commonSettings(customScalacOptions),
+    commonSettings(customScalacOptions :+ unusedImports),
     wartremoverErrors -= Wart.ToString //this is usually translated to js tostring which the scala code don't know about
   )
   .enablePlugins(ScalaJSPlugin, ScalaJSWeb)

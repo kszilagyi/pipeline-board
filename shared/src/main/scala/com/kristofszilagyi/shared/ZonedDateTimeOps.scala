@@ -1,6 +1,6 @@
 package com.kristofszilagyi.shared
 
-import java.time.{Instant, ZonedDateTime}
+import java.time.ZonedDateTime
 
 import scala.concurrent.duration.{Duration, FiniteDuration}
 
