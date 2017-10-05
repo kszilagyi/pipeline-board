@@ -3,15 +3,19 @@ package com.kristofszilagyi
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZoneId}
 
-import com.kristofszilagyi.shared.Wart
+import com.kristofszilagyi.Canvas.className
+import com.kristofszilagyi.shared.InstantOps._
+import com.kristofszilagyi.shared.JenkinsBuildStatus.Building
+import com.kristofszilagyi.shared.TypeSafeEqualsOps._
 import com.kristofszilagyi.shared.ZonedDateTimeOps._
+import com.kristofszilagyi.shared.{JobDetails, Wart}
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.svg_<^._
 import org.scalajs.dom.raw._
 import org.scalajs.dom.svg.SVG
 
 import scala.collection.immutable
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{DurationLong, FiniteDuration}
 
 @SuppressWarnings(Array(Wart.Overloading))
 object RenderUtils {
@@ -53,7 +57,7 @@ object RenderUtils {
     }
   }
 
-  def strip(jobAreaWidthPx: Int, stripHeight: Int, color: String, elementsInside: Seq[TagMod]) = {
+  def strip(jobAreaWidthPx: Int, stripHeight: Int, color: String, elementsInside: Seq[TagMod]): TagOf[SVG] = {
 
     val background = <.rect(
       ^.height := stripHeight,
@@ -61,11 +65,62 @@ object RenderUtils {
       ^.fill := color,
     )
     <.svg(
-      elementsInside ++ List(
+      List(
         ^.height := stripHeight,
         ^.width := jobAreaWidthPx,
         background
-      ): _*
+      ) ++ elementsInside: _*
     )
+  }
+
+  def jobRectanges(jobState: JobDetails, drawingAreaBeginning: Instant,
+                   durationSinceDrawingAreaBeginning: FiniteDuration, jobAreaWidthPx: Int, rectangleHeight: Int, stripHeight: Int): Seq[TagOf[SVGElement]] = {
+    jobState.r match {
+      case Left(err) =>
+        List(<.text(
+          ^.fill := "red",
+          err.s
+        ))
+      case Right(runs) =>
+        runs.flatMap(either => either match {
+          case Right(run) =>
+            val startRelativeToDrawingAreaBeginning = (run.buildStart - drawingAreaBeginning).max(0.seconds)
+            val endRelativeToDrawingAreaBeginning = (run.buildFinish - drawingAreaBeginning).min(durationSinceDrawingAreaBeginning)
+            //todo deal with more than a day longer
+            //todo deal with partially inside
+            val buildRectangle = if (endRelativeToDrawingAreaBeginning.toNanos > 0 &&
+              startRelativeToDrawingAreaBeginning < durationSinceDrawingAreaBeginning) {
+
+              val relativeStartRatio = startRelativeToDrawingAreaBeginning / durationSinceDrawingAreaBeginning
+              val relativeEndRatio = if (run.jenkinsBuildStatus ==== Building) {
+                1.0
+              } else {
+                endRelativeToDrawingAreaBeginning / durationSinceDrawingAreaBeginning
+              }
+              val relativeWidthRatio = relativeEndRatio - relativeStartRatio //todo assert if this is negative, also round up to >10?
+              val startPx = relativeStartRatio * jobAreaWidthPx
+              //todo this will go out of the drawing area, fix
+              val widthPx = Math.max(4, relativeWidthRatio * jobAreaWidthPx) //todo display these nicely, probably not really a problem
+              //todo header, colors, hovering, zooming, horizontal lines, click
+
+              Some(<.rect(
+                ^.x := startPx.toInt,
+                ^.y := (stripHeight - rectangleHeight)/2,
+                ^.width := widthPx.toInt,
+                ^.height := rectangleHeight.toInt,
+                className := s"${run.jenkinsBuildStatus.entryName.toLowerCase} build_rect",
+                //todo add length
+                //todo not have ended when building
+                //todo replace this with jQuery or sg similar and make it pop up immediately not after delay and not browser dependent way
+                <.title(s"Id: ${run.buildNumber.i}\nStart: ${run.buildStart}\nFinish: ${run.buildFinish}\nStatus: ${run.jenkinsBuildStatus}")
+              ))
+            } else
+              None
+            buildRectangle.toList
+          case Left(value) =>
+            //todo do sg
+            None.toList
+        })
+    }
   }
 }
