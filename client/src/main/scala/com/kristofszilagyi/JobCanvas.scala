@@ -112,31 +112,11 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
 
     def backgroundBaseLine(idx: Int): Int = (textBaseLine(idx) - space * spaceContentRatio).toInt
     val colors = List("black", "darkslategrey")
-    val maxHorizontalBar = 5
-    //val now = ZonedDateTime.now()
 
-    val verticleLines = (0 to maxHorizontalBar) flatMap { idx =>
-      val x = jobAreaWidthPx / maxHorizontalBar * idx + labelEndPx
-      val yStart = backgroundBaseLine(0)
-      val yEnd = backgroundBaseLine(0) + s.jenkinsState.results.size * space + 10
-      val timeOnBar = s.endTime.atZone(ZoneId.systemDefault()) - drawingAreaDuration + idx.toDouble / maxHorizontalBar * drawingAreaDuration
-      List(
-        <.line(
-          ^.x1 := x,
-          ^.y1 := yStart,
-          ^.x2 := x,
-          ^.y2 := yEnd,
-          ^.strokeWidth := "1",
-          ^.stroke := "grey"
-        ),
-        <.text(
-          ^.x := x,
-          ^.y := yEnd + 10,
-          ^.textAnchor := "middle",
-          timeOnBar.format(DateTimeFormatter.ofPattern("uuuu-MMM-dd HH:mm:ss"))
-        )
-      )
-    }
+    val verticleLines = RenderUtils.verticalLines(labelEndPx = labelEndPx, jobAreaWidthPx = jobAreaWidthPx,
+      backgroundBaseLine = backgroundBaseLine, numberOfJobs = s.jenkinsState.results.size,
+      jobHeight = space, endTime = s.endTime, drawingAreaDuration = drawingAreaDuration,
+      timeZone = ZoneId.systemDefault())
 
     val labels = s.jenkinsState.results.zipWithIndex.map { case (jobState, idx) =>
       <.text(
