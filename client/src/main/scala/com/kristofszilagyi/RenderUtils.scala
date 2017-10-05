@@ -12,12 +12,15 @@ import scala.collection.immutable
 import scala.concurrent.duration.FiniteDuration
 object RenderUtils {
 
-  def verticalLines(labelEndPx: Int, jobAreaWidthPx: Int,
+  def atX(x: Int, elements: Seq[TagMod]) = {
+    <.svg(elements :+ (^.x := x): _*)
+  }
+  def verticalLines(jobAreaWidthPx: Int,
                     backgroundBaseLine: Int => Int, numberOfJobs: Int, jobHeight: Int,
                     endTime: Instant, drawingAreaDuration: FiniteDuration, timeZone: ZoneId): immutable.Seq[TagOf[SVGElement]] = {
     val maxHorizontalBar = 5
     (0 to maxHorizontalBar) flatMap { idx =>
-      val x = jobAreaWidthPx / maxHorizontalBar * idx + labelEndPx
+      val x = jobAreaWidthPx / maxHorizontalBar * idx
       val yStart = backgroundBaseLine(0)
       val yEnd = backgroundBaseLine(0) + numberOfJobs * jobHeight + 10
       val timeOnBar = endTime.atZone(timeZone) - drawingAreaDuration + idx.toDouble / maxHorizontalBar * drawingAreaDuration

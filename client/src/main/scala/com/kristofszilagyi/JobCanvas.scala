@@ -17,6 +17,7 @@ import japgolly.scalajs.react.{BackendScope, Callback, CallbackTo, ScalaComponen
 import org.scalajs.dom.raw.{Element, SVGElement}
 import org.scalajs.dom.svg.SVG
 import InstantOps._
+import com.kristofszilagyi.RenderUtils.{atX, verticalLines}
 import org.scalajs.dom.html.Div
 import slogging.LazyLogging
 
@@ -113,10 +114,10 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
     def backgroundBaseLine(idx: Int): Int = (textBaseLine(idx) - space * spaceContentRatio).toInt
     val colors = List("black", "darkslategrey")
 
-    val verticleLines = RenderUtils.verticalLines(labelEndPx = labelEndPx, jobAreaWidthPx = jobAreaWidthPx,
+    val verticleLines = atX(labelEndPx, verticalLines(jobAreaWidthPx = jobAreaWidthPx,
       backgroundBaseLine = backgroundBaseLine, numberOfJobs = s.jenkinsState.results.size,
       jobHeight = space, endTime = s.endTime, drawingAreaDuration = drawingAreaDuration,
-      timeZone = ZoneId.systemDefault())
+      timeZone = ZoneId.systemDefault()))
 
     val labels = s.jenkinsState.results.zipWithIndex.map { case (jobState, idx) =>
       <.text(
@@ -201,7 +202,7 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
 
     val groupedDrawObjs = <.g((drawObjs ++ dragListeners) :+ wheelListener: _*)
     val svgParams = (labels :+ (^.width := jobAreaWidthPx + labelEndPx + rightMargin) :+
-      (^.height := 1000) :+ groupedDrawObjs) ++ verticleLines
+      (^.height := 1000) :+ groupedDrawObjs) :+ verticleLines
     val checkboxId = "follow"
     html_<^.<.div(
       html_<^.<input(
