@@ -1,24 +1,21 @@
 package com.kristofszilagyi
 
-import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZoneId}
 
 import com.kristofszilagyi.Canvas.className
+import com.kristofszilagyi.RenderUtils.{atX, verticalLines}
+import com.kristofszilagyi.shared.InstantOps._
 import com.kristofszilagyi.shared.JenkinsBuildStatus.Building
 import com.kristofszilagyi.shared.TypeSafeEqualsOps._
 import com.kristofszilagyi.shared.Wart._
-import com.kristofszilagyi.shared.ZonedDateTimeOps._
 import com.kristofszilagyi.shared._
-import japgolly.scalajs.react.raw.{SyntheticDragEvent, SyntheticMouseEvent, SyntheticWheelEvent}
+import japgolly.scalajs.react.raw.{SyntheticMouseEvent, SyntheticWheelEvent}
 import japgolly.scalajs.react.vdom.PackageBase.VdomAttr
 import japgolly.scalajs.react.vdom._
 import japgolly.scalajs.react.vdom.svg_<^.{<, _}
-import japgolly.scalajs.react.{BackendScope, Callback, CallbackTo, ScalaComponent, vdom}
-import org.scalajs.dom.raw.{Element, SVGElement}
-import org.scalajs.dom.svg.SVG
-import InstantOps._
-import com.kristofszilagyi.RenderUtils.{atX, verticalLines}
+import japgolly.scalajs.react.{BackendScope, Callback, CallbackTo, ScalaComponent}
 import org.scalajs.dom.html.Div
+import org.scalajs.dom.raw.SVGElement
 import slogging.LazyLogging
 
 import scala.concurrent.ExecutionContext
