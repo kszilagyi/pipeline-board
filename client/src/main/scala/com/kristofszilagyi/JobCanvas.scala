@@ -213,7 +213,7 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
       background +: jobRectangles
     }
     val rightMargin = 100
-    val wheelListener = html_<^.^.onWheel ==> handleSubmit
+    val wheelListener = html_<^.^.onWheel ==> handleWheel
     val dragListeners = List(html_<^.^.onMouseDown ==> handleDown,
       html_<^.^.onMouseMove ==> handleMove,
       html_<^.^.onMouseUp ==> handleUp,
@@ -223,14 +223,24 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
     val svgParams = (labels :+ (^.width := jobAreaWidthPx + labelEndPx + rightMargin) :+
       (^.height := 1000) :+ groupedDrawObjs) ++ verticleLines
     val checkboxId = "follow"
-    html_<^.<.div(html_<^.<input(html_<^.^.id := checkboxId, html_<^.^.`type` := "checkbox", html_<^.^.checked := s.followTime),
+    html_<^.<.div(
+      html_<^.<input(
+        html_<^.^.id := checkboxId,
+        html_<^.^.`type` := "checkbox",
+        html_<^.^.checked := s.followTime,
+        html_<^.^.onChange --> $.modState{s =>
+          val follow = !s.followTime
+          val endTime = if (follow) Instant.now else s.endTime
+          s.copy(followTime = follow, endTime = endTime)
+        }
+      ),
       html_<^.<.label(html_<^.^.`for` := checkboxId, "Follow"),
       <.svg(
         svgParams: _*
       )
     )
   }
-  def handleSubmit(e: SyntheticWheelEvent[SVGElement]): CallbackTo[Unit] = {
+  def handleWheel(e: SyntheticWheelEvent[SVGElement]): CallbackTo[Unit] = {
    e.stopPropagationCB >> e.preventDefaultCB >>
       adjustZoomLevel(e.deltaY)
   }
