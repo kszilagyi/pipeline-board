@@ -2,7 +2,7 @@ package com.kristofszilagyi
 
 import java.time.{Instant, ZoneId}
 
-import com.kristofszilagyi.RenderUtils.{atPosition, jobRectanges, strip, verticalLines}
+import com.kristofszilagyi.RenderUtils._
 import com.kristofszilagyi.shared.InstantOps._
 import com.kristofszilagyi.shared.Wart._
 import com.kristofszilagyi.shared._
@@ -108,12 +108,11 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
     def backgroundBaseLine(idx: Int): Int = (textBaseLine(idx) - space * spaceContentRatio).toInt
     val colors = List("black", "darkslategrey")
 
+    val jobArea = JobArea(jobAreaWidthPx, s.endTime, drawingAreaDuration)
     val verticleLines = atPosition(
       x = labelEndPx,
-      elements = verticalLines(jobAreaWidthPx = jobAreaWidthPx,
-        backgroundBaseLine = backgroundBaseLine, numberOfJobs = s.jenkinsState.results.size,
-        jobHeight = space, endTime = s.endTime, drawingAreaDuration = drawingAreaDuration,
-        timeZone = ZoneId.systemDefault())
+      elements = verticalLines( backgroundBaseLine = backgroundBaseLine, numberOfJobs = s.jenkinsState.results.size,
+        jobHeight = space, jobArea, timeZone = ZoneId.systemDefault())
     )
 
     val labels = s.jenkinsState.results.zipWithIndex.map { case (jobState, idx) =>
@@ -128,14 +127,10 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
 
     val drawObjs = s.jenkinsState.results.zipWithIndex.flatMap { case (jobState, idx) =>
 
-      val drawingAreaBeginning = s.endTime - drawingAreaDuration
-      val durationSinceDrawingAreaBeginning = s.endTime - drawingAreaBeginning
-
       val oneStrip = atPosition(
         x = labelEndPx, y = backgroundBaseLine(idx),
         elements = List(strip(jobAreaWidthPx = jobAreaWidthPx, stripHeight = space, colors(idx % colors.size),
-          jobRectanges(jobState = jobState, drawingAreaBeginning = drawingAreaBeginning,
-            durationSinceDrawingAreaBeginning = durationSinceDrawingAreaBeginning, jobAreaWidthPx = jobAreaWidthPx, rectangleHeight = (space * 0.75).toInt,
+          jobRectanges(jobState = jobState, jobArea = jobArea, rectangleHeight = (space * 0.75).toInt,
             stripHeight = space)))
       )
       List(oneStrip)

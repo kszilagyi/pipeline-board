@@ -20,6 +20,10 @@ import scala.concurrent.duration.{DurationLong, FiniteDuration}
 @SuppressWarnings(Array(Wart.Overloading))
 object RenderUtils {
 
+  final case class JobArea(widthPx: Int, endTime: Instant, drawingAreaDuration: FiniteDuration) {
+    def startTime: Instant = endTime - drawingAreaDuration
+    def length: FiniteDuration = endTime - startTime
+  }
   @SuppressWarnings(Array(Wart.DefaultArguments))
   def atPosition(x: Int = 0, y: Int = 0, elements: Seq[TagMod]): TagOf[SVG] = {
     <.svg(elements ++ List(^.x := x, ^.y := y): _*)
@@ -29,15 +33,14 @@ object RenderUtils {
     atPosition(x, y, List(elements))
   }
 
-  def verticalLines(jobAreaWidthPx: Int,
-                    backgroundBaseLine: Int => Int, numberOfJobs: Int, jobHeight: Int,
-                    endTime: Instant, drawingAreaDuration: FiniteDuration, timeZone: ZoneId): immutable.Seq[TagOf[SVGElement]] = {
+  def verticalLines(backgroundBaseLine: Int => Int, numberOfJobs: Int, jobHeight: Int,
+                    jobArea: JobArea, timeZone: ZoneId): immutable.Seq[TagOf[SVGElement]] = {
     val maxHorizontalBar = 5
     (0 to maxHorizontalBar) flatMap { idx =>
-      val x = jobAreaWidthPx / maxHorizontalBar * idx
+      val x = jobArea.widthPx / maxHorizontalBar * idx
       val yStart = backgroundBaseLine(0)
       val yEnd = backgroundBaseLine(0) + numberOfJobs * jobHeight + 10
-      val timeOnBar = endTime.atZone(timeZone) - drawingAreaDuration + idx.toDouble / maxHorizontalBar * drawingAreaDuration
+      val timeOnBar = jobArea.endTime.atZone(timeZone) - jobArea.drawingAreaDuration + idx.toDouble / maxHorizontalBar * jobArea.drawingAreaDuration
       List(
         <.line(
           ^.x1 := x,
@@ -73,8 +76,7 @@ object RenderUtils {
     )
   }
 
-  def jobRectanges(jobState: JobDetails, drawingAreaBeginning: Instant,
-                   durationSinceDrawingAreaBeginning: FiniteDuration, jobAreaWidthPx: Int, rectangleHeight: Int, stripHeight: Int): Seq[TagOf[SVGElement]] = {
+  def jobRectanges(jobState: JobDetails, jobArea: JobArea, rectangleHeight: Int, stripHeight: Int): Seq[TagOf[SVGElement]] = {
     jobState.r match {
       case Left(err) =>
         List(<.text(
@@ -84,23 +86,23 @@ object RenderUtils {
       case Right(runs) =>
         runs.flatMap(either => either match {
           case Right(run) =>
-            val startRelativeToDrawingAreaBeginning = (run.buildStart - drawingAreaBeginning).max(0.seconds)
-            val endRelativeToDrawingAreaBeginning = (run.buildFinish - drawingAreaBeginning).min(durationSinceDrawingAreaBeginning)
+            val startRelativeToDrawingAreaBeginning = (run.buildStart - jobArea.startTime).max(0.seconds)
+            val endRelativeToDrawingAreaBeginning = (run.buildFinish - jobArea.startTime).min(jobArea.length)
             //todo deal with more than a day longer
             //todo deal with partially inside
             val buildRectangle = if (endRelativeToDrawingAreaBeginning.toNanos > 0 &&
-              startRelativeToDrawingAreaBeginning < durationSinceDrawingAreaBeginning) {
+              startRelativeToDrawingAreaBeginning < jobArea.length) {
 
-              val relativeStartRatio = startRelativeToDrawingAreaBeginning / durationSinceDrawingAreaBeginning
+              val relativeStartRatio = startRelativeToDrawingAreaBeginning / jobArea.length
               val relativeEndRatio = if (run.jenkinsBuildStatus ==== Building) {
                 1.0
               } else {
-                endRelativeToDrawingAreaBeginning / durationSinceDrawingAreaBeginning
+                endRelativeToDrawingAreaBeginning / jobArea.length
               }
               val relativeWidthRatio = relativeEndRatio - relativeStartRatio //todo assert if this is negative, also round up to >10?
-              val startPx = relativeStartRatio * jobAreaWidthPx
+              val startPx = relativeStartRatio * jobArea.widthPx
               //todo this will go out of the drawing area, fix
-              val widthPx = Math.max(4, relativeWidthRatio * jobAreaWidthPx) //todo display these nicely, probably not really a problem
+              val widthPx = Math.max(4, relativeWidthRatio * jobArea.widthPx) //todo display these nicely, probably not really a problem
               //todo header, colors, hovering, zooming, horizontal lines, click
 
               Some(<.rect(
