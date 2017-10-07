@@ -7,7 +7,6 @@ import com.kristofszilagyi.shared.InstantOps._
 import com.kristofszilagyi.shared.Wart._
 import com.kristofszilagyi.shared._
 import japgolly.scalajs.react.raw.{SyntheticMouseEvent, SyntheticWheelEvent}
-import japgolly.scalajs.react.vdom.PackageBase.VdomAttr
 import japgolly.scalajs.react.vdom._
 import japgolly.scalajs.react.vdom.svg_<^.{<, _}
 import japgolly.scalajs.react.{BackendScope, Callback, CallbackTo, ScalaComponent}
@@ -195,8 +194,6 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
 //todo I have no sense of unit: there should be different horizontal lines with different color
 // which signal minutes, hours, days, weeks. months
 object Canvas {
-
-  def className = VdomAttr("className")
 
   @SuppressWarnings(Array(Public))
   def jobCanvas(timers: JsTimers, autowire: MockableAutowire)(implicit ec: ExecutionContext) = {

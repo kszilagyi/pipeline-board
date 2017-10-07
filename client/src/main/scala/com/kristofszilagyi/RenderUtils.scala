@@ -3,12 +3,12 @@ package com.kristofszilagyi
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZoneId}
 
-import com.kristofszilagyi.Canvas.className
 import com.kristofszilagyi.shared.InstantOps._
 import com.kristofszilagyi.shared.JenkinsBuildStatus.Building
 import com.kristofszilagyi.shared.TypeSafeEqualsOps._
 import com.kristofszilagyi.shared.ZonedDateTimeOps._
 import com.kristofszilagyi.shared.{JobDetails, Wart}
+import japgolly.scalajs.react.vdom.PackageBase.VdomAttr
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.svg_<^._
 import org.scalajs.dom.raw._
@@ -19,6 +19,10 @@ import scala.concurrent.duration.{DurationLong, FiniteDuration}
 
 @SuppressWarnings(Array(Wart.Overloading))
 object RenderUtils {
+
+  def alignmentBaseline = VdomAttr("alignmentBaseline")
+
+  def className = VdomAttr("className")
 
   final case class JobArea(widthPx: Int, endTime: Instant, drawingAreaDuration: FiniteDuration) {
     def startTime: Instant = endTime - drawingAreaDuration
@@ -41,7 +45,6 @@ object RenderUtils {
   def moveTo(x: Int, y: Int, elements: TagMod): TagOf[G] = {
     moveTo(x, y, List(elements))
   }
-
 
   def verticalLines(backgroundBaseLine: Int => Int, numberOfJobs: Int, jobHeight: Int,
                     jobArea: JobArea, timeZone: ZoneId): immutable.Seq[TagOf[SVGElement]] = {
@@ -91,6 +94,8 @@ object RenderUtils {
       case Left(err) =>
         List(<.text(
           ^.fill := "red",
+          alignmentBaseline := "middle",
+          ^.y := stripHeight/2,
           err.s
         ))
       case Right(runs) =>

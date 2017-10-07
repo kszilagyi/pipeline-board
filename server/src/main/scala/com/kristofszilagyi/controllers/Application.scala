@@ -38,7 +38,11 @@ class AutowireApiImpl(fetcher: JenkinsFetcher) extends AutowireApi {
         JenkinsJobUrl(Uri.parse("http://localhost:8080/job/Slow%20stuff")),
         JenkinsJobUrl(Uri.parse("http://localhost:8080/job/Other%20stuff")),
         JenkinsJobUrl(Uri.parse("http://localhost:8080/job/One%20stuff")),
-        JenkinsJobUrl(Uri.parse("http://localhost:8080/job/Slow%20stuff"))
+        JenkinsJobUrl(Uri.parse("http://localhost:8080/job/Slow%20stuff")),
+        JenkinsJobUrl(Uri.parse("http://localhost:8080/job/Slow%20stuff222")),
+        JenkinsJobUrl(Uri.parse("http://localhost:9999/job/Slow%20stuff")),
+        JenkinsJobUrl(Uri.parse("http://localasdfhost:9999/job/Slow%20stuff")),
+        JenkinsJobUrl(Uri.parse("https://jenkins.mono-project.com/job/test-mono-mainline-2017-06/"))
       ),
       _//todo old jobs do not show up on the rest API (just the 100 newest)
       )}
