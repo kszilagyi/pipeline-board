@@ -12,7 +12,7 @@ import com.kristofszilagyi.shared.{JobDetails, Wart}
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.svg_<^._
 import org.scalajs.dom.raw._
-import org.scalajs.dom.svg.SVG
+import org.scalajs.dom.svg.{G, SVG}
 
 import scala.collection.immutable
 import scala.concurrent.duration.{DurationLong, FiniteDuration}
@@ -25,13 +25,23 @@ object RenderUtils {
     def length: FiniteDuration = endTime - startTime
   }
   @SuppressWarnings(Array(Wart.DefaultArguments))
-  def atPosition(x: Int = 0, y: Int = 0, elements: Seq[TagMod]): TagOf[SVG] = {
+  def nestAt(x: Int = 0, y: Int = 0, elements: Seq[TagMod]): TagOf[SVG] = {
     <.svg(elements ++ List(^.x := x, ^.y := y): _*)
   }
 
-  def atPosition(x: Int, y: Int, elements: TagMod): TagOf[SVG] = {
-    atPosition(x, y, List(elements))
+  def nestAt(x: Int, y: Int, elements: TagMod): TagOf[SVG] = {
+    nestAt(x, y, List(elements))
   }
+
+  @SuppressWarnings(Array(Wart.DefaultArguments))
+  def moveTo(x: Int = 0, y: Int = 0, elements: Seq[TagMod]): TagOf[G] = {
+    <.g(elements ++ List(^.transform := s"translate($x, $y)"): _*)
+  }
+
+  def moveTo(x: Int, y: Int, elements: TagMod): TagOf[G] = {
+    moveTo(x, y, List(elements))
+  }
+
 
   def verticalLines(backgroundBaseLine: Int => Int, numberOfJobs: Int, jobHeight: Int,
                     jobArea: JobArea, timeZone: ZoneId): immutable.Seq[TagOf[SVGElement]] = {

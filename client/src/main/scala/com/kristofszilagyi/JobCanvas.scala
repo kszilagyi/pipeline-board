@@ -109,7 +109,7 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
     val colors = List("black", "darkslategrey")
 
     val jobArea = JobArea(jobAreaWidthPx, s.endTime, drawingAreaDuration)
-    val verticleLines = atPosition(
+    val verticleLines = moveTo(
       x = labelEndPx,
       elements = verticalLines( backgroundBaseLine = backgroundBaseLine, numberOfJobs = s.jenkinsState.results.size,
         jobHeight = space, jobArea, timeZone = ZoneId.systemDefault())
@@ -127,7 +127,7 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
 
     val drawObjs = s.jenkinsState.results.zipWithIndex.flatMap { case (jobState, idx) =>
 
-      val oneStrip = atPosition(
+      val oneStrip = nestAt(
         x = labelEndPx, y = backgroundBaseLine(idx),
         elements = List(strip(jobAreaWidthPx = jobAreaWidthPx, stripHeight = space, colors(idx % colors.size),
           jobRectanges(jobState = jobState, jobArea = jobArea, rectangleHeight = (space * 0.75).toInt,
