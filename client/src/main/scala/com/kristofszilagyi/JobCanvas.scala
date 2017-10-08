@@ -34,7 +34,7 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
   } >> Callback.future {
     autowireApi.dataFeed().map { jenkinsState =>
       setJenkinsState(jenkinsState)
-    }
+    }//todo show error when server is unreachable
   }
 
   def setJenkinsState(jenkinsState: BulkFetchResult): CallbackTo[Unit] = {
@@ -113,17 +113,18 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
       elements = verticalLines( backgroundBaseLine = backgroundBaseLine, numberOfJobs = s.jenkinsState.results.size,
         jobHeight = space, jobArea, timeZone = ZoneId.systemDefault())
     )
-
+    //todo show warning if some of the queries failed
     val labels = s.jenkinsState.results.zipWithIndex.map { case (jobState, idx) =>
       <.text(
         ^.x := labelEndPx,
         ^.y := textBaseLine(idx),
         ^.textAnchor := "end",
         ^.fill := "black",
-        jobState.request.s
+        jobState.request.name.s
       )
     }
 
+    //todo add links to labels and builds
     val drawObjs = s.jenkinsState.results.zipWithIndex.flatMap { case (jobState, idx) =>
 
       val oneStrip = nestAt(

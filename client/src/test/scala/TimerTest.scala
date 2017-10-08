@@ -5,8 +5,10 @@ import java.time.Instant
 import com.kristofszilagyi.shared.JenkinsBuildStatus.Successful
 import com.kristofszilagyi.shared.SameThreadExecutionContext._
 import com.kristofszilagyi.shared._
+import com.netaporter.uri.Uri
 import japgolly.scalajs.react.test.ReactTestUtils
 import utest._
+
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 import scala.scalajs.js.timers.SetIntervalHandle
@@ -37,7 +39,7 @@ final class MockTimers extends JsTimers {
 
 final class MockAutowire extends MockableAutowire {
   def dataFeed(): Future[BulkFetchResult] = {
-    Future.successful(BulkFetchResult(List(JobDetails(Url("example.com"),
+    Future.successful(BulkFetchResult(List(JobDetails(Job(JobName("something"), JobUrl(Uri.parse("example.com"))),
       Right(Seq(Right(JenkinsBuildInfo(Successful, Instant.now(), Instant.now(), BuildNumber(1)))))
     ))))
   }

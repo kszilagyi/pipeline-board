@@ -14,7 +14,6 @@ import com.netaporter.uri.dsl._
 import play.api.libs.ws._
 import TypeSafeEqualsOps._
 import com.kristofszilagyi.utils.Utopia
-import com.kristofszilagyi.utils.UrlOps.RichUri
 import com.kristofszilagyi.utils.Utopia.RichFuture
 import io.circe._
 import io.circe.generic.JsonCodec
@@ -33,18 +32,13 @@ object JenkinsJson { //this object is only here because @JsonCodec has the publi
   @JsonCodec final case class PartialJenkinsJobInfo(builds: Seq[PartialBuildInfo])
 }
 
-final case class JenkinsJobUrl(uri: Uri) {
-  def buildInfo(buildNumber: BuildNumber): Uri = uri / buildNumber.i.toString
-}
-
-
 object JenkinsFetcher {
 
   sealed trait Incoming
 
-  final case class Fetch(job: Seq[JenkinsJobUrl], replyTo: ActorRef[BulkFetchResult]) extends Incoming
+  final case class Fetch(job: Seq[Job], replyTo: ActorRef[BulkFetchResult]) extends Incoming
 
-  private final case class JobInfoWithoutBuildInfo(job: JenkinsJobUrl, jobNumbers: Seq[BuildNumber])
+  private final case class JobInfoWithoutBuildInfo(job: Job, jobNumbers: Seq[BuildNumber])
 
   private final case class JobsInfoWithoutBuildInfo(replyTo: ActorRef[BulkFetchResult], results: Seq[Either[JobDetails, JenkinsFetcher.JobInfoWithoutBuildInfo]]) extends Incoming
 
@@ -57,24 +51,25 @@ object JenkinsFetcher {
   }
 }
 
+//todo add caching
 class JenkinsFetcher @Inject()(ws: WSClient)(implicit ec: ExecutionContext) extends LazyLogging {
 
   @SuppressWarnings(Array(Wart.Null, Wart.Public)) //I think these are false positive
   val behaviour: Actor.Immutable[Incoming] = Actor.immutable[Incoming] { (ctx, msg) =>
     msg match {
       case Fetch(jobs, replyTo) =>
-        def fetchJobDetails(job: JenkinsJobUrl) = {
-          val jobUrl = job.uri.toUrl
-          val destination = restify(job.uri)
+        def fetchJobDetails(job: Job) = {
+          val jobUrl = job.uri.u
+          val destination = restify(jobUrl)
           ws.url(destination).get.map { safeRead[PartialJenkinsJobInfo] }.lift.noThrowingMap{
             case Success(maybePartialJenkinsJobInfo) => maybePartialJenkinsJobInfo match {
-              case Left(error) => Left(JobDetails(jobUrl, Left(error)))
+              case Left(error) => Left(JobDetails(job, Left(error)))
               case Right(jenkinsJobInfo) => Right(JobInfoWithoutBuildInfo(
                 job,
                 jenkinsJobInfo.builds.map(partialBuildInfo => BuildNumber(partialBuildInfo.number))
               ))
             }
-            case Failure(t) => Left(JobDetails(jobUrl, Left(ResponseError.failedToConnect(t))))
+            case Failure(t) => Left(JobDetails(job, Left(ResponseError.failedToConnect(t))))
           }
         }
 
@@ -87,10 +82,9 @@ class JenkinsFetcher @Inject()(ws: WSClient)(implicit ec: ExecutionContext) exte
 
         Actor.same
       case JobsInfoWithoutBuildInfo(replyTo, jobs) =>
-        def fetchBuildResults(jenkinsJobUrl: JenkinsJobUrl, buildNumbers: Seq[BuildNumber]) = {
-          val jobUrl = jenkinsJobUrl.uri.toUrl
+        def fetchBuildResults(job: Job, buildNumbers: Seq[BuildNumber]) = {
           val buildInfoFutures = buildNumbers.map { buildNumber =>
-            val destination = restify(jenkinsJobUrl.buildInfo(buildNumber))
+            val destination = restify(job.uri.buildInfo(buildNumber))
             ws.url(destination).get.map(result => safeRead[PartialDetailedBuildInfo](result)
               .map { buildInfo =>
                 val startTime = Instant.ofEpochMilli(buildInfo.timestamp)
@@ -103,7 +97,7 @@ class JenkinsFetcher @Inject()(ws: WSClient)(implicit ec: ExecutionContext) exte
             }
           }
           Utopia.sequence(buildInfoFutures) noThrowingMap { buildInfo =>
-            JobDetails(jobUrl, Right(buildInfo))
+            JobDetails(job, Right(buildInfo))
           }
         }
         val futureResults = jobs.map {

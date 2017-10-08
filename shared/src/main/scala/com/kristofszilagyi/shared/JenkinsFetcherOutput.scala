@@ -1,9 +1,15 @@
 package com.kristofszilagyi.shared
 
+import com.netaporter.uri._
+import com.netaporter.uri.dsl.uriToUriOps
 import io.circe.generic.JsonCodec
-import io.circe.Error
+import io.circe.{Decoder, Encoder, Error}
 import slogging.LazyLogging
 import io.circe.disjunctionCodecs._
+import UriEncoders._
+import cats.syntax.either.{catsSyntaxEither, catsSyntaxEitherObject}
+import io.circe._
+
 
 @JsonCodec final case class ResponseError(s: String)
 
@@ -22,10 +28,24 @@ object ResponseError extends LazyLogging{
   }
 }
 
-@JsonCodec final case class Url(s: String)
+object UriEncoders {
+  implicit val uriDecoder: Decoder[Uri] = Decoder.decodeString.emap { str =>
+    Either.catchNonFatal(Uri.parse(str)).leftMap(t => s"Deserialising Uri failed with: ${t.getMessage}")
+  }
+
+  implicit val uriEncoder: Encoder[Uri] = Encoder.encodeString.contramap[Uri](_.toString)
+}
 
 
-@JsonCodec final case class JobDetails(request: Url, r: Either[ResponseError, Seq[scala.Either[ResponseError, JenkinsBuildInfo]]])
+@JsonCodec final case class JobUrl(u: Uri) {
+  def buildInfo(buildNumber: BuildNumber): Uri = u /  buildNumber.i.toString
+}
+
+@JsonCodec final case class JobName(s: String)
+
+@JsonCodec final case class Job(name: JobName, uri: JobUrl)
+
+@JsonCodec final case class JobDetails(request: Job, r: Either[ResponseError, Seq[scala.Either[ResponseError, JenkinsBuildInfo]]])
 
 @JsonCodec final case class BulkFetchResult(results: Seq[JobDetails])
 

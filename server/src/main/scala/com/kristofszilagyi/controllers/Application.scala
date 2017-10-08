@@ -8,8 +8,8 @@ import akka.typed.ActorSystem
 import akka.util.{ByteString, Timeout}
 import com.kristofszilagyi.controllers.AutowireServer.throwEither
 import com.kristofszilagyi.fetchers.JenkinsFetcher.Fetch
-import com.kristofszilagyi.fetchers.{JenkinsFetcher, JenkinsJobUrl}
-import com.kristofszilagyi.shared.{AutowireApi, BulkFetchResult, JobDetails, Wart}
+import com.kristofszilagyi.fetchers.{JenkinsFetcher}
+import com.kristofszilagyi.shared._
 import com.netaporter.uri.Uri
 import io.circe.{Decoder, Encoder}
 import play.api.Configuration
@@ -27,22 +27,22 @@ class AutowireApiImpl(fetcher: JenkinsFetcher) extends AutowireApi {
     implicit val scheduler: Scheduler = system.scheduler
     system ? { Fetch(
       //todo create different jobs
-      List(JenkinsJobUrl(Uri.parse("http://localhost:8080/job/Other%20stuff")),
-        JenkinsJobUrl(Uri.parse("http://localhost:8080/job/One%20stuff")),
-        JenkinsJobUrl(Uri.parse("http://localhost:8080/job/Slow%20stuff")),
-        JenkinsJobUrl(Uri.parse("http://localhost:8080/job/Other%20stuff")),
-        JenkinsJobUrl(Uri.parse("http://localhost:8080/job/One%20stuff")),
-        JenkinsJobUrl(Uri.parse("http://localhost:8080/job/Slow%20stuff")),
-        JenkinsJobUrl(Uri.parse("http://localhost:8080/job/Other%20stuff")),
-        JenkinsJobUrl(Uri.parse("http://localhost:8080/job/One%20stuff")),
-        JenkinsJobUrl(Uri.parse("http://localhost:8080/job/Slow%20stuff")),
-        JenkinsJobUrl(Uri.parse("http://localhost:8080/job/Other%20stuff")),
-        JenkinsJobUrl(Uri.parse("http://localhost:8080/job/One%20stuff")),
-        JenkinsJobUrl(Uri.parse("http://localhost:8080/job/Slow%20stuff")),
-        JenkinsJobUrl(Uri.parse("http://localhost:8080/job/Slow%20stuff222")),
-        JenkinsJobUrl(Uri.parse("http://localhost:9999/job/Slow%20stuff")),
-        JenkinsJobUrl(Uri.parse("http://localasdfhost:9999/job/Slow%20stuff")),
-        JenkinsJobUrl(Uri.parse("https://jenkins.mono-project.com/job/test-mono-mainline-2017-06/"))
+      List(Job(JobName("Other stuff"), JobUrl(Uri.parse("http://localhost:8080/job/Other%20stuff"))),
+        Job(JobName("One stuff"), JobUrl(Uri.parse("http://localhost:8080/job/One%20stuff"))),
+        Job(JobName("Slow stuff"), JobUrl(Uri.parse("http://localhost:8080/job/Slow%20stuff"))),
+        Job(JobName("Other stuff"), JobUrl(Uri.parse("http://localhost:8080/job/Other%20stuff"))),
+        Job(JobName("One stuff"), JobUrl(Uri.parse("http://localhost:8080/job/One%20stuff"))),
+        Job(JobName("Slow stuff"), JobUrl(Uri.parse("http://localhost:8080/job/Slow%20stuff"))),
+        Job(JobName("Other stuff"), JobUrl(Uri.parse("http://localhost:8080/job/Other%20stuff"))),
+        Job(JobName("One stuff"), JobUrl(Uri.parse("http://localhost:8080/job/One%20stuff"))),
+        Job(JobName("job1"), JobUrl(Uri.parse("http://localhost:8080/job/Slow%20stuff"))),
+        Job(JobName("Other stuff"), JobUrl(Uri.parse("http://localhost:8080/job/Other%20stuff"))),
+        Job(JobName("One stuff"), JobUrl(Uri.parse("http://localhost:8080/job/One%20stuff"))),
+        Job(JobName("Slow stuff"), JobUrl(Uri.parse("http://localhost:8080/job/Slow%20stuff"))),
+        Job(JobName("Broken stuff1"), JobUrl(Uri.parse("http://localhost:8080/job/Slow%20stuff222"))),
+        Job(JobName("Broken stuff2"), JobUrl(Uri.parse("http://localhost:9999/job/Slow%20stuff"))),
+        Job(JobName("Broken stuff3"), JobUrl(Uri.parse("http://localasdfhost:9999/job/Slow%20stuff"))),
+        Job(JobName("Mono"),JobUrl(Uri.parse("https://jenkins.mono-project.com/job/test-mono-mainline-2017-06/")))
       ),
       _//todo old jobs do not show up on the rest API (just the 100 newest)
       )}
@@ -72,7 +72,7 @@ class Application @Inject() (fetcher: JenkinsFetcher)(val config: Configuration)
                             (implicit ec: ExecutionContext) extends InjectedController {
 
   def root: Action[AnyContent] = Action {
-    Ok(views.html.index("Multi CI dashboard")(config))
+    Ok(views.html.index("Pipeline monitor")(config))
   }
 
   val autowireServer = new AutowireServer(new AutowireApiImpl(fetcher))

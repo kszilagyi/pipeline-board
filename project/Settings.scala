@@ -6,10 +6,10 @@ import play.sbt.PlayImport.ws
 import sbt.Keys.libraryDependencies
 
 object Settings {
-  val name = "multi-ci-dashboard"
+  val name = "pipeline-monitor"
 
   /** The version of your application */
-  val version = "1.1.4"
+  val version = "0.0.1"
 
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   object versions {
@@ -40,6 +40,7 @@ object Settings {
       "com.beachape" %%% "enumeratum" % enumeratumVersion,
       "com.beachape" %%% "enumeratum-circe" % enumeratumVersion,
       "com.lihaoyi" %%% "utest" % uTest % Test,
+      "io.lemonlabs" %%% "scala-uri" % "0.5.0",
       "biz.enef" %%% "slogging" % "0.5.2"
     ) ++ Seq(
       "io.circe" %%% "circe-core",
@@ -54,7 +55,6 @@ object Settings {
     "com.vmunier" %% "scalajs-scripts" % scalajsScripts,
     "org.webjars" % "font-awesome" % "4.7.0" % Provided,
     "org.webjars" % "bootstrap" % bootstrap % Provided,
-    "io.lemonlabs" %% "scala-uri" % "0.4.16",
     "com.typesafe.akka" %% "akka-typed" % "2.5.3",
     "biz.enef" %% "slogging-slf4j" % "0.5.2",
     "org.slf4j" % "slf4j-simple" % "1.7.+",
