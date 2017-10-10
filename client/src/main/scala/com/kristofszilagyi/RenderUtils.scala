@@ -9,10 +9,10 @@ import com.kristofszilagyi.shared.TypeSafeEqualsOps._
 import com.kristofszilagyi.shared.ZonedDateTimeOps._
 import com.kristofszilagyi.shared.{JobDetails, Wart}
 import japgolly.scalajs.react.vdom.PackageBase.VdomAttr
-import japgolly.scalajs.react.vdom.TagOf
+import japgolly.scalajs.react.vdom.{SvgTagOf, TagOf}
 import japgolly.scalajs.react.vdom.svg_<^._
 import org.scalajs.dom.raw._
-import org.scalajs.dom.svg.{G, SVG}
+import org.scalajs.dom.svg.{A, G, SVG}
 
 import scala.collection.immutable
 import scala.concurrent.duration.{DurationLong, FiniteDuration}
@@ -20,9 +20,16 @@ import scala.concurrent.duration.{DurationLong, FiniteDuration}
 @SuppressWarnings(Array(Wart.Overloading))
 object RenderUtils {
 
-  def alignmentBaseline = VdomAttr("alignmentBaseline")
+  def alignmentBaseline: VdomAttr[Any] = VdomAttr("alignmentBaseline")
 
-  def className = VdomAttr("className")
+  def className: VdomAttr[Any] = VdomAttr("className")
+  def target: VdomAttr[Any] = VdomAttr("target")
+
+  def a: SvgTagOf[A] = SvgTagOf[A]("a")
+
+  def href: VdomAttr[Any] = VdomAttr("href")
+
+  def textDecoration = VdomAttr("textDecoration")
 
   final case class JobArea(widthPx: Int, endTime: Instant, drawingAreaDuration: FiniteDuration) {
     def startTime: Instant = endTime - drawingAreaDuration

@@ -1,49 +1,36 @@
 package com.kristofszilagyi.controllers
 
+import java.nio.file.{Files, Paths}
 import javax.inject._
 
 import akka.actor.Scheduler
-import akka.typed.scaladsl.AskPattern._
 import akka.typed.ActorSystem
-import akka.util.{ByteString, Timeout}
+import akka.typed.scaladsl.AskPattern._
+import akka.util.Timeout
 import com.kristofszilagyi.controllers.AutowireServer.throwEither
+import com.kristofszilagyi.fetchers.JenkinsFetcher
 import com.kristofszilagyi.fetchers.JenkinsFetcher.Fetch
-import com.kristofszilagyi.fetchers.{JenkinsFetcher}
 import com.kristofszilagyi.shared._
 import com.netaporter.uri.Uri
+import io.circe.parser.decode
+import io.circe.syntax.EncoderOps
 import io.circe.{Decoder, Encoder}
 import play.api.Configuration
 import play.api.mvc._
-import io.circe.syntax.EncoderOps
-import io.circe.parser.decode
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.collection.JavaConverters._
 import scala.concurrent.duration.DurationInt
+import scala.concurrent.{ExecutionContext, Future}
 
-class AutowireApiImpl(fetcher: JenkinsFetcher) extends AutowireApi {
+class AutowireApiImpl(fetcher: JenkinsFetcher, jobs: Seq[Job]) extends AutowireApi {
+  implicit val timeout: Timeout = Timeout(10.seconds)
+  val system: ActorSystem[Fetch] = ActorSystem("Demo", fetcher.behaviour)
+  implicit val scheduler: Scheduler = system.scheduler
+
   def dataFeed(): Future[BulkFetchResult] = {
-    implicit val timeout: Timeout = Timeout(10.seconds)
-    val system: ActorSystem[Fetch] = ActorSystem("Demo", fetcher.behaviour)
-    implicit val scheduler: Scheduler = system.scheduler
+
     system ? { Fetch(
-      //todo create different jobs
-      List(Job(JobName("Other stuff"), JobUrl(Uri.parse("http://localhost:8080/job/Other%20stuff"))),
-        Job(JobName("One stuff"), JobUrl(Uri.parse("http://localhost:8080/job/One%20stuff"))),
-        Job(JobName("Slow stuff"), JobUrl(Uri.parse("http://localhost:8080/job/Slow%20stuff"))),
-        Job(JobName("Other stuff"), JobUrl(Uri.parse("http://localhost:8080/job/Other%20stuff"))),
-        Job(JobName("One stuff"), JobUrl(Uri.parse("http://localhost:8080/job/One%20stuff"))),
-        Job(JobName("Slow stuff"), JobUrl(Uri.parse("http://localhost:8080/job/Slow%20stuff"))),
-        Job(JobName("Other stuff"), JobUrl(Uri.parse("http://localhost:8080/job/Other%20stuff"))),
-        Job(JobName("One stuff"), JobUrl(Uri.parse("http://localhost:8080/job/One%20stuff"))),
-        Job(JobName("job1"), JobUrl(Uri.parse("http://localhost:8080/job/Slow%20stuff"))),
-        Job(JobName("Other stuff"), JobUrl(Uri.parse("http://localhost:8080/job/Other%20stuff"))),
-        Job(JobName("One stuff"), JobUrl(Uri.parse("http://localhost:8080/job/One%20stuff"))),
-        Job(JobName("Slow stuff"), JobUrl(Uri.parse("http://localhost:8080/job/Slow%20stuff"))),
-        Job(JobName("Broken stuff1"), JobUrl(Uri.parse("http://localhost:8080/job/Slow%20stuff222"))),
-        Job(JobName("Broken stuff2"), JobUrl(Uri.parse("http://localhost:9999/job/Slow%20stuff"))),
-        Job(JobName("Broken stuff3"), JobUrl(Uri.parse("http://localasdfhost:9999/job/Slow%20stuff"))),
-        Job(JobName("Mono"),JobUrl(Uri.parse("https://jenkins.mono-project.com/job/test-mono-mainline-2017-06/")))
-      ),
+      jobs,
       _//todo old jobs do not show up on the rest API (just the 100 newest)
       )}
   }
@@ -75,7 +62,26 @@ class Application @Inject() (fetcher: JenkinsFetcher)(val config: Configuration)
     Ok(views.html.index("Pipeline monitor")(config))
   }
 
-  val autowireServer = new AutowireServer(new AutowireApiImpl(fetcher))
+
+  @SuppressWarnings(Array(Wart.Throw))
+  val autowireServer = {
+
+    //todo fix for other OS
+    //todo rename with project rename
+    val home = System.getenv("HOME")
+    val config = s"$home/.pipeline_monitor/config"
+    val jobs = Files.readAllLines(Paths.get(config)).asScala.flatMap { line =>
+      line.split(";").map(_.trim).toList match {
+        case name :: url :: Nil =>
+          Some(Job(JobName(name), JobUrl(Uri.parse(url)))).toList
+        case Nil => None.toList   //skip empty lines
+        case List("") => None.toList //skip empty lines
+        case sgElse =>
+          throw new RuntimeException(s"config in $config has wrong line: $sgElse, tpe: ${sgElse.getClass}")
+      }
+    }
+    new AutowireServer(new AutowireApiImpl(fetcher, jobs))
+  }
 
   def autowireApi(path: String): Action[AnyContent] = Action.async { implicit request =>
 
