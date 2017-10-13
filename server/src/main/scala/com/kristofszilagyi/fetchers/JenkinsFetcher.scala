@@ -34,13 +34,13 @@ object JenkinsJson { //this object is only here because @JsonCodec has the publi
 
 object JenkinsFetcher {
 
-  sealed trait Incoming
+  sealed trait FetcherIncoming
 
-  final case class Fetch(job: Seq[Job], replyTo: ActorRef[BulkFetchResult]) extends Incoming
+  final case class Fetch(replyTo: ActorRef[BulkFetchResult]) extends FetcherIncoming
 
   private final case class JobInfoWithoutBuildInfo(job: Job, jobNumbers: Seq[BuildNumber])
 
-  private final case class JobsInfoWithoutBuildInfo(replyTo: ActorRef[BulkFetchResult], results: Seq[Either[JobDetails, JenkinsFetcher.JobInfoWithoutBuildInfo]]) extends Incoming
+  private final case class JobsInfoWithoutBuildInfo(replyTo: ActorRef[BulkFetchResult], results: Seq[Either[JobDetails, JenkinsFetcher.JobInfoWithoutBuildInfo]]) extends FetcherIncoming
 
   private def restify(u: Uri) = u / "api/json" ? "pretty=true"
 
@@ -52,12 +52,13 @@ object JenkinsFetcher {
 }
 
 //todo add caching
-class JenkinsFetcher @Inject()(ws: WSClient)(implicit ec: ExecutionContext) extends LazyLogging {
+//todo replyto should be here if possible
+class JenkinsFetcher @Inject()(ws: WSClient)(jobsToFetch: Seq[Job])(implicit ec: ExecutionContext) extends LazyLogging {
 
   @SuppressWarnings(Array(Wart.Null, Wart.Public)) //I think these are false positive
-  val behaviour: Actor.Immutable[Incoming] = Actor.immutable[Incoming] { (ctx, msg) =>
+  val behaviour: Actor.Immutable[FetcherIncoming] = Actor.immutable[FetcherIncoming] { (ctx, msg) =>
     msg match {
-      case Fetch(jobs, replyTo) =>
+      case Fetch(replyTo) =>
         def fetchJobDetails(job: Job) = {
           val jobUrl = job.uri.u
           val destination = restify(jobUrl)
@@ -73,7 +74,7 @@ class JenkinsFetcher @Inject()(ws: WSClient)(implicit ec: ExecutionContext) exte
           }
         }
 
-        val future = Utopia.sequence(jobs.map { job =>
+        val future = Utopia.sequence(jobsToFetch.map { job =>
           fetchJobDetails(job)
         })
         future onComplete {
@@ -106,7 +107,7 @@ class JenkinsFetcher @Inject()(ws: WSClient)(implicit ec: ExecutionContext) exte
             fetchBuildResults(job, buildNumbers)
         }
         Utopia.sequence(futureResults) onComplete {
-          replyTo ! BulkFetchResult(_)
+          replyTo ! BulkFetchResult(_, Instant.now())
         }
         Actor.same
     }

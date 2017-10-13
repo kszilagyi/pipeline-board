@@ -1,5 +1,7 @@
 package com.kristofszilagyi.shared
 
+import java.time.Instant
+
 import com.netaporter.uri._
 import com.netaporter.uri.dsl.uriToUriOps
 import io.circe.generic.JsonCodec
@@ -47,6 +49,6 @@ object UriEncoders {
 
 @JsonCodec final case class JobDetails(request: Job, r: Either[ResponseError, Seq[scala.Either[ResponseError, JenkinsBuildInfo]]])
 
-@JsonCodec final case class BulkFetchResult(results: Seq[JobDetails])
+@JsonCodec final case class BulkFetchResult(results: Seq[JobDetails], resultTime: Instant)
 
 

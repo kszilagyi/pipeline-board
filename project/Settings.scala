@@ -55,7 +55,7 @@ object Settings {
     "com.vmunier" %% "scalajs-scripts" % scalajsScripts,
     "org.webjars" % "font-awesome" % "4.7.0" % Provided,
     "org.webjars" % "bootstrap" % bootstrap % Provided,
-    "com.typesafe.akka" %% "akka-typed" % "2.5.3",
+    "com.typesafe.akka" %% "akka-typed" % "2.5.6",
     "biz.enef" %% "slogging-slf4j" % "0.5.2",
     "org.slf4j" % "slf4j-simple" % "1.7.+",
     guice, ws
