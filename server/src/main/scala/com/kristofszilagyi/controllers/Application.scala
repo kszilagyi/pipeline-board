@@ -26,15 +26,14 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
 
   @SuppressWarnings(Array(Wart.Throw))
   private val autowireServer = {
-
     //todo fix for other OS
     //todo rename with project rename
     val home = System.getenv("HOME")
     val config = s"$home/.pipeline_monitor/config"
     val jobs = Files.readAllLines(Paths.get(config)).asScala.flatMap { line =>
       line.split(";").map(_.trim).toList match {
-        case name :: url :: Nil =>
-          Some(Job(JobName(name), JobUrl(Uri.parse(url)))).toList
+        case name :: url :: jobType :: Nil =>
+          Some(Job(JobName(name), JobUrl(Uri.parse(url)), JobType.withNameInsensitive(jobType))).toList
         case Nil => None.toList   //skip empty lines
         case List("") => None.toList //skip empty lines
         case sgElse =>

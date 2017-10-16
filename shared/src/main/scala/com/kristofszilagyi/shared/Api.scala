@@ -11,8 +11,11 @@ import slogging.LazyLogging
 import io.circe.disjunctionCodecs._
 import UriEncoders._
 import cats.syntax.either.{catsSyntaxEither, catsSyntaxEitherObject}
+import enumeratum.{CirceEnum, Enum, EnumEntry}
 import io.circe._
 import io.circe.java8.time._
+
+import scala.collection.immutable
 
 @JsonCodec final case class ResponseError(s: String)
 
@@ -46,7 +49,17 @@ object UriEncoders {
 
 @JsonCodec final case class JobName(s: String)
 
-@JsonCodec final case class Job(name: JobName, uri: JobUrl)
+sealed trait JobType extends EnumEntry
+
+object JobType extends Enum[JobType] with CirceEnum[JobType] {
+  case object GitLabCi extends JobType
+  case object Jenkins extends JobType
+
+  def values: immutable.IndexedSeq[JobType] = findValues
+}
+
+
+@JsonCodec final case class Job(name: JobName, uri: JobUrl, tpe: JobType)
 
 @JsonCodec final case class JobDetails(request: Job, r: Either[ResponseError, Seq[scala.Either[ResponseError, JenkinsBuildInfo]]])
 
