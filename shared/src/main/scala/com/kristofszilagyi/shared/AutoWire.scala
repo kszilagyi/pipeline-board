@@ -10,5 +10,5 @@ object AutowireApi {
 }
 
 trait AutowireApi{
-  def dataFeed(): Future[BulkFetchResult]
+  def dataFeed(): Future[ResultAndTime]
 }

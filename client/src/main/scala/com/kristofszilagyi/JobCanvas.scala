@@ -10,8 +10,7 @@ import japgolly.scalajs.react.raw.{SyntheticMouseEvent, SyntheticWheelEvent}
 import japgolly.scalajs.react.vdom._
 import japgolly.scalajs.react.vdom.svg_<^.{<, _}
 import japgolly.scalajs.react.{BackendScope, Callback, CallbackTo, ScalaComponent}
-import org.scalajs.dom.html.Div
-import org.scalajs.dom.raw.SVGElement
+import org.scalajs.dom.raw.{HTMLElement, SVGElement}
 import slogging.LazyLogging
 
 import scala.concurrent.ExecutionContext
@@ -19,7 +18,7 @@ import scala.concurrent.duration.Duration.Infinite
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.scalajs.js
 
-final case class State(jenkinsState: BulkFetchResult, drawingAreaDuration: FiniteDuration,
+final case class State(ciState: ResultAndTime, drawingAreaDuration: FiniteDuration,
                        endTime: Instant, mouseDownY: Option[Int], endTimeAtMouseDown: Instant, followTime: Boolean)
 
 final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireApi: MockableAutowire)
@@ -37,9 +36,9 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
     }//todo show error when server is unreachable
   }
 
-  def setJenkinsState(jenkinsState: BulkFetchResult): CallbackTo[Unit] = {
+  def setJenkinsState(jenkinsState: ResultAndTime): CallbackTo[Unit] = {
     $.modState(s => {
-      s.copy(jenkinsState = jenkinsState)
+      s.copy(ciState = jenkinsState)
     })
   }
 
@@ -94,7 +93,7 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
     interval = None
   }
 
-  def render(s: State): TagOf[Div] = {
+  def render(s: State): TagOf[HTMLElement] = {
 
     val labelEndPx = 300
     val space = 50
@@ -107,66 +106,71 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
     def backgroundBaseLine(idx: Int): Int = (textBaseLine(idx) - space * spaceContentRatio).toInt
     val colors = List("black", "darkslategrey")
 
-    val jobArea = JobArea(jobAreaWidthPx, s.endTime, drawingAreaDuration)
-    val verticleLines = moveTo(
-      x = labelEndPx,
-      elements = verticalLines( backgroundBaseLine = backgroundBaseLine, numberOfJobs = s.jenkinsState.results.size,
-        jobHeight = space, jobArea, timeZone = ZoneId.systemDefault())
-    )
-    //todo show warning if some of the queries failed
-    val labels = s.jenkinsState.results.zipWithIndex.map { case (jobState, idx) =>
-      a(
-        href := jobState.request.uri.u.toString(),
-        target := "_blank",
-        <.text(
-          ^.x := labelEndPx,
-          ^.y := textBaseLine(idx),
-          ^.textAnchor := "end",
-          ^.fill := "black",
-          textDecoration := "underline",
-          jobState.request.name.s
+    s.ciState.cachedResult.maybe.map { ciState =>
+      //todo handle if jobs are not fecthed yet
+      //todo handle if data is stale
+
+      val jobArea = JobArea(jobAreaWidthPx, s.endTime, drawingAreaDuration)
+      val verticleLines = moveTo(
+        x = labelEndPx,
+        elements = verticalLines(backgroundBaseLine = backgroundBaseLine, numberOfJobs = ciState.results.size,
+          jobHeight = space, jobArea, timeZone = ZoneId.systemDefault())
+      )
+      //todo show warning if some of the queries failed
+      val labels = ciState.results.zipWithIndex.map { case (jobState, idx) =>
+        a(
+          href := jobState.request.uri.u.toString(),
+          target := "_blank",
+          <.text(
+            ^.x := labelEndPx,
+            ^.y := textBaseLine(idx),
+            ^.textAnchor := "end",
+            ^.fill := "black",
+            textDecoration := "underline",
+            jobState.request.name.s
+          )
+        )
+      }
+
+      //todo add links to labels and builds
+      val drawObjs = ciState.results.zipWithIndex.flatMap { case (jobState, idx) =>
+
+        val oneStrip = nestAt(
+          x = labelEndPx, y = backgroundBaseLine(idx),
+          elements = List(strip(jobAreaWidthPx = jobAreaWidthPx, stripHeight = space, colors(idx % colors.size),
+            jobRectanges(jobState = jobState, jobArea = jobArea, rectangleHeight = (space * 0.75).toInt,
+              stripHeight = space)))
+        )
+        List(oneStrip)
+      }
+      val rightMargin = 100
+      val wheelListener = html_<^.^.onWheel ==> handleWheel
+      val dragListeners = List(html_<^.^.onMouseDown ==> handleDown,
+        html_<^.^.onMouseMove ==> handleMove,
+        html_<^.^.onMouseUp ==> handleUp,
+      )
+
+      val groupedDrawObjs = <.g((drawObjs ++ dragListeners) :+ wheelListener: _*)
+      val svgParams = (labels :+ (^.width := jobAreaWidthPx + labelEndPx + rightMargin) :+
+        (^.height := 1000) :+ groupedDrawObjs) :+ verticleLines
+      val checkboxId = "follow"
+      html_<^.<.div(
+        html_<^.< input(
+          html_<^.^.id := checkboxId,
+          html_<^.^.`type` := "checkbox",
+          html_<^.^.checked := s.followTime,
+          html_<^.^.onChange --> $.modState { s =>
+            val follow = !s.followTime
+            val endTime = if (follow) Instant.now else s.endTime
+            s.copy(followTime = follow, endTime = endTime)
+          }
+        ),
+        html_<^.<.label(html_<^.^.`for` := checkboxId, "Follow"),
+        <.svg(
+          svgParams: _*
         )
       )
-    }
-
-    //todo add links to labels and builds
-    val drawObjs = s.jenkinsState.results.zipWithIndex.flatMap { case (jobState, idx) =>
-
-      val oneStrip = nestAt(
-        x = labelEndPx, y = backgroundBaseLine(idx),
-        elements = List(strip(jobAreaWidthPx = jobAreaWidthPx, stripHeight = space, colors(idx % colors.size),
-          jobRectanges(jobState = jobState, jobArea = jobArea, rectangleHeight = (space * 0.75).toInt,
-            stripHeight = space)))
-      )
-      List(oneStrip)
-    }
-    val rightMargin = 100
-    val wheelListener = html_<^.^.onWheel ==> handleWheel
-    val dragListeners = List(html_<^.^.onMouseDown ==> handleDown,
-      html_<^.^.onMouseMove ==> handleMove,
-      html_<^.^.onMouseUp ==> handleUp,
-    )
-
-    val groupedDrawObjs = <.g((drawObjs ++ dragListeners) :+ wheelListener: _*)
-    val svgParams = (labels :+ (^.width := jobAreaWidthPx + labelEndPx + rightMargin) :+
-      (^.height := 1000) :+ groupedDrawObjs) :+ verticleLines
-    val checkboxId = "follow"
-    html_<^.<.div(
-      html_<^.<input(
-        html_<^.^.id := checkboxId,
-        html_<^.^.`type` := "checkbox",
-        html_<^.^.checked := s.followTime,
-        html_<^.^.onChange --> $.modState{s =>
-          val follow = !s.followTime
-          val endTime = if (follow) Instant.now else s.endTime
-          s.copy(followTime = follow, endTime = endTime)
-        }
-      ),
-      html_<^.<.label(html_<^.^.`for` := checkboxId, "Follow"),
-      <.svg(
-        svgParams: _*
-      )
-    )
+    }.getOrElse(html_<^.<.p("No data yet"))
   }
   def handleWheel(e: SyntheticWheelEvent[SVGElement]): CallbackTo[Unit] = {
    e.stopPropagationCB >> e.preventDefaultCB >>
@@ -204,7 +208,7 @@ object Canvas {
   @SuppressWarnings(Array(Public))
   def jobCanvas(timers: JsTimers, autowire: MockableAutowire)(implicit ec: ExecutionContext) = {
     ScalaComponent.builder[Unit]("Timer")
-      .initialState(State(BulkFetchResult(Seq.empty), drawingAreaDuration = 1.days,
+      .initialState(State(ResultAndTime(CachedResult(None), Instant.now), drawingAreaDuration = 1.days,
         Instant.now(), mouseDownY = None, endTimeAtMouseDown = Instant.now, followTime = true))
       .backend(new JobCanvas(_, timers, autowire))
       .renderS(_.backend.render(_))

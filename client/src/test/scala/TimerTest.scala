@@ -38,10 +38,25 @@ final class MockTimers extends JsTimers {
 }
 
 final class MockAutowire extends MockableAutowire {
-  def dataFeed(): Future[BulkFetchResult] = {
-    Future.successful(BulkFetchResult(List(JobDetails(Job(JobName("something"), JobUrl(Uri.parse("example.com"))),
-      Right(Seq(Right(JenkinsBuildInfo(Successful, Instant.now(), Instant.now(), BuildNumber(1)))))
-    ))))
+  def dataFeed(): Future[ResultAndTime] = {
+    Future.successful(
+      ResultAndTime(
+        CachedResult(
+          Some(
+            AllResult(
+              List(
+                JobDetails(
+                  Job(JobName("something"), JobUrl(Uri.parse("example.com"))),
+                  Right(Seq(Right(JenkinsBuildInfo(Successful, Instant.now(), Instant.now(), BuildNumber(1)))))
+                )
+              ),
+              Instant.now()
+            )
+          )
+        ),
+        Instant.now()
+      )
+    )
   }
 }
 

@@ -1,5 +1,6 @@
 package com.kristofszilagyi.shared
 
+
 import java.time.Instant
 
 import com.netaporter.uri._
@@ -11,7 +12,7 @@ import io.circe.disjunctionCodecs._
 import UriEncoders._
 import cats.syntax.either.{catsSyntaxEither, catsSyntaxEitherObject}
 import io.circe._
-
+import io.circe.java8.time._
 
 @JsonCodec final case class ResponseError(s: String)
 
@@ -49,6 +50,10 @@ object UriEncoders {
 
 @JsonCodec final case class JobDetails(request: Job, r: Either[ResponseError, Seq[scala.Either[ResponseError, JenkinsBuildInfo]]])
 
-@JsonCodec final case class BulkFetchResult(results: Seq[JobDetails], resultTime: Instant)
+@JsonCodec final case class FetcherResult(results: Seq[JobDetails])
 
+@JsonCodec final case class AllResult(results: Seq[JobDetails], resultTime: Instant)
+@JsonCodec final case class CachedResult(maybe: Option[AllResult])
+
+@JsonCodec final case class ResultAndTime(cachedResult: CachedResult, time: Instant)
 

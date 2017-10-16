@@ -3,18 +3,21 @@ package com.kristofszilagyi.controllers
 import java.nio.file.{Files, Paths}
 import javax.inject._
 
+import com.kristofszilagyi.Aggregator
+import com.kristofszilagyi.cache.ResultCache
 import com.kristofszilagyi.fetchers.JenkinsFetcher
 import com.kristofszilagyi.shared._
 import com.netaporter.uri.Uri
 import play.api.Configuration
+import play.api.libs.ws.WSClient
 import play.api.mvc._
 
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext
 
 
-class Application @Inject() (fetcher: JenkinsFetcher)(val config: Configuration)
-                            (implicit ec: ExecutionContext) extends InjectedController {
+class Application @Inject() (wsClient: WSClient)(val config: Configuration)
+                                             (implicit ec: ExecutionContext) extends InjectedController {
 
   def root: Action[AnyContent] = Action {
     Ok(views.html.index("Pipeline monitor")(config))
@@ -22,7 +25,7 @@ class Application @Inject() (fetcher: JenkinsFetcher)(val config: Configuration)
 
 
   @SuppressWarnings(Array(Wart.Throw))
-  val autowireServer = {
+  private val autowireServer = {
 
     //todo fix for other OS
     //todo rename with project rename
@@ -38,7 +41,9 @@ class Application @Inject() (fetcher: JenkinsFetcher)(val config: Configuration)
           throw new RuntimeException(s"config in $config has wrong line: $sgElse, tpe: ${sgElse.getClass}")
       }
     }
-    new AutowireServer(new AutowireApiImpl(fetcher, jobs))
+    val aggregator = new Aggregator(Seq(new JenkinsFetcher(wsClient, "jenkins", jobs)))
+    val resultCache = new ResultCache(aggregator.behavior)
+    new AutowireServer(new AutowireApiImpl(resultCache))
   }
 
   def autowireApi(path: String): Action[AnyContent] = Action.async { implicit request =>

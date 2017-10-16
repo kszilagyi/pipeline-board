@@ -36,11 +36,11 @@ object JenkinsFetcher {
 
   sealed trait FetcherIncoming
 
-  final case class Fetch(replyTo: ActorRef[BulkFetchResult]) extends FetcherIncoming
+  final case class Fetch(replyTo: ActorRef[FetcherResult]) extends FetcherIncoming
 
   private final case class JobInfoWithoutBuildInfo(job: Job, jobNumbers: Seq[BuildNumber])
 
-  private final case class JobsInfoWithoutBuildInfo(replyTo: ActorRef[BulkFetchResult], results: Seq[Either[JobDetails, JenkinsFetcher.JobInfoWithoutBuildInfo]]) extends FetcherIncoming
+  private final case class JobsInfoWithoutBuildInfo(replyTo: ActorRef[FetcherResult], results: Seq[Either[JobDetails, JenkinsFetcher.JobInfoWithoutBuildInfo]]) extends FetcherIncoming
 
   private def restify(u: Uri) = u / "api/json" ? "pretty=true"
 
@@ -50,10 +50,15 @@ object JenkinsFetcher {
     else decode[T](response.body).left.map(err => ResponseError.invalidJson(err))
   }
 }
+trait Fetcher {
+  def name: String
+  def behaviour: Behavior[FetcherIncoming]
+}
 
 //todo add caching
 //todo replyto should be here if possible
-class JenkinsFetcher @Inject()(ws: WSClient)(jobsToFetch: Seq[Job])(implicit ec: ExecutionContext) extends LazyLogging {
+class JenkinsFetcher (ws: WSClient, override val name: String,
+                                    jobsToFetch: Seq[Job])(implicit ec: ExecutionContext) extends LazyLogging with Fetcher {
 
   @SuppressWarnings(Array(Wart.Null, Wart.Public)) //I think these are false positive
   val behaviour: Actor.Immutable[FetcherIncoming] = Actor.immutable[FetcherIncoming] { (ctx, msg) =>
@@ -107,7 +112,7 @@ class JenkinsFetcher @Inject()(ws: WSClient)(jobsToFetch: Seq[Job])(implicit ec:
             fetchBuildResults(job, buildNumbers)
         }
         Utopia.sequence(futureResults) onComplete {
-          replyTo ! BulkFetchResult(_, Instant.now())
+          replyTo ! FetcherResult(_)
         }
         Actor.same
     }

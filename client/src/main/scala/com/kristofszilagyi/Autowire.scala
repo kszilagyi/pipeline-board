@@ -30,9 +30,9 @@ class MyClient(implicit ec: ExecutionContext) extends autowire.Client[String, De
 
 
 trait MockableAutowire {
-  def dataFeed(): Future[BulkFetchResult]
+  def dataFeed(): Future[ResultAndTime]
 }
 
 final class RealAutowire(self: AutowireApi.Type)(implicit ec: ExecutionContext) extends MockableAutowire {
-  def dataFeed(): Future[BulkFetchResult] = self.dataFeed().call()
+  def dataFeed(): Future[ResultAndTime] = self.dataFeed().call()
 }

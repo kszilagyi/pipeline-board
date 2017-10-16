@@ -1,25 +1,27 @@
 package com.kristofszilagyi.controllers
 
+import java.time.Instant
+
 import akka.actor.Scheduler
 import akka.typed.ActorSystem
-import akka.util.Timeout
-import com.kristofszilagyi.fetchers.JenkinsFetcher
-import com.kristofszilagyi.fetchers.JenkinsFetcher.Fetch
-import com.kristofszilagyi.shared.{AutowireApi, BulkFetchResult, Job}
-import scala.concurrent.duration.DurationInt
 import akka.typed.scaladsl.AskPattern._
+import akka.util.Timeout
+import com.kristofszilagyi.cache.{FetchCached, ResultCache}
+import com.kristofszilagyi.shared.{AutowireApi, ResultAndTime}
 
-import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.{ExecutionContext, Future}
 
-class AutowireApiImpl(fetcher: JenkinsFetcher, jobs: Seq[Job]) extends AutowireApi {
-  implicit val timeout: Timeout = Timeout(10.seconds)
-  val system: ActorSystem[Fetch] = ActorSystem("Demo", fetcher.behaviour)
-  implicit val scheduler: Scheduler = system.scheduler
+class AutowireApiImpl(resultCache: ResultCache) extends AutowireApi {
+  private implicit val timeout: Timeout = Timeout(10.seconds)
+  private val system = ActorSystem(resultCache.behaviour, "pipeline-monitor")
+  private implicit val scheduler: Scheduler = system.scheduler
+  private implicit val ec: ExecutionContext = system.executionContext
 
-  def dataFeed(): Future[BulkFetchResult] = {
-    system ? { Fetch(
-      jobs,
-      _//todo old jobs do not show up on the rest API (just the 100 newest)
-    )}
+  def dataFeed(): Future[ResultAndTime] = {
+    (system ? { FetchCached(
+      _
+    )}).map(ResultAndTime(_, Instant.now))
+    //todo old jobs do not show up on the rest API (just the 100 newest)
   }
 }
