@@ -13,7 +13,6 @@ object JsMain extends js.JSApp with LazyLogging {
   def main(): Unit = {
 
     logger.info("Application starting")
-
     val _ = JobCanvas().renderIntoDOM(dom.document.getElementById("root"))
   }
 }

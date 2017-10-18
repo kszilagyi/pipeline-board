@@ -6,6 +6,7 @@
 GET     /                                 com.kristofszilagyi.controllers.Application.root
 GET     /api/*path                      com.kristofszilagyi.controllers.Application.autowireApi(path: String)
 
+GET     /public/stylesheets/scala.css            com.kristofszilagyi.controllers.Application.css
 GET     /public/*file                     controllers.Assets.versioned(path="/public", file: Asset)
 
 # Autowire calls

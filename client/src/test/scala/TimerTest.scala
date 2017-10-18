@@ -2,7 +2,7 @@ package com.kristofszilagyi
 
 import java.time.Instant
 
-import com.kristofszilagyi.shared.JenkinsBuildStatus.Successful
+import com.kristofszilagyi.shared.BuildStatus.Successful
 import com.kristofszilagyi.shared.SameThreadExecutionContext._
 import com.kristofszilagyi.shared._
 import com.netaporter.uri.Uri
@@ -46,8 +46,8 @@ final class MockAutowire extends MockableAutowire {
             AllResult(
               List(
                 JobDetails(
-                  Job(JobName("something"), JobUrl(Uri.parse("example.com"))),
-                  Right(Seq(Right(JenkinsBuildInfo(Successful, Instant.now(), Instant.now(), BuildNumber(1)))))
+                  Job(JobName("something"), JobUrl(Uri.parse("example.com")), JobType.Jenkins),
+                  Right(Seq(Right(BuildInfo(Successful, Instant.now(), Instant.now(), BuildNumber(1)))))
                 )
               ),
               Instant.now()

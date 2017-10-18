@@ -3,19 +3,20 @@ package com.kristofszilagyi
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZoneId}
 
+import com.kristofszilagyi.shared.BuildStatus.{Aborted, Building, Failed, Successful}
 import com.kristofszilagyi.shared.InstantOps._
-import com.kristofszilagyi.shared.JenkinsBuildStatus.Building
 import com.kristofszilagyi.shared.TypeSafeEqualsOps._
 import com.kristofszilagyi.shared.ZonedDateTimeOps._
-import com.kristofszilagyi.shared.{JobDetails, Wart}
+import com.kristofszilagyi.shared.{JobDetails, MyStyles, Wart}
 import japgolly.scalajs.react.vdom.PackageBase.VdomAttr
-import japgolly.scalajs.react.vdom.{SvgTagOf, TagOf}
 import japgolly.scalajs.react.vdom.svg_<^._
+import japgolly.scalajs.react.vdom.{SvgTagOf => _, TagMod => _, _}
 import org.scalajs.dom.raw._
 import org.scalajs.dom.svg.{A, G, SVG}
 
 import scala.collection.immutable
 import scala.concurrent.duration.{DurationLong, FiniteDuration}
+import scalacss.ScalaCssReact._
 
 @SuppressWarnings(Array(Wart.Overloading))
 object RenderUtils {
@@ -23,6 +24,7 @@ object RenderUtils {
   def alignmentBaseline: VdomAttr[Any] = VdomAttr("alignmentBaseline")
 
   def className: VdomAttr[Any] = VdomAttr("className")
+
   def target: VdomAttr[Any] = VdomAttr("target")
 
   def a: SvgTagOf[A] = SvgTagOf[A]("a")
@@ -30,6 +32,8 @@ object RenderUtils {
   def href: VdomAttr[Any] = VdomAttr("href")
 
   def textDecoration = VdomAttr("textDecoration")
+
+  def animation = VdomAttr("animation")
 
   final case class JobArea(widthPx: Int, endTime: Instant, drawingAreaDuration: FiniteDuration) {
     def startTime: Instant = endTime - drawingAreaDuration
@@ -116,7 +120,7 @@ object RenderUtils {
               startRelativeToDrawingAreaBeginning < jobArea.length) {
 
               val relativeStartRatio = startRelativeToDrawingAreaBeginning / jobArea.length
-              val relativeEndRatio = if (run.jenkinsBuildStatus ==== Building) {
+              val relativeEndRatio = if (run.buildStatus ==== Building) {
                 1.0
               } else {
                 endRelativeToDrawingAreaBeginning / jobArea.length
@@ -127,17 +131,25 @@ object RenderUtils {
               val widthPx = Math.max(4, relativeWidthRatio * jobArea.widthPx) //todo display these nicely, probably not really a problem
               //todo header, colors, hovering, zooming, horizontal lines, click
 
-              Some(<.rect(
+              val style: List[TagMod] = run.buildStatus match {
+                case Building => List(MyStyles.building)
+                case Failed => List(MyStyles.failed)
+                case Successful => List(MyStyles.success)
+                case Aborted => List(MyStyles.aborted)
+              }
+
+              val nonStyle = List(
                 ^.x := startPx.toInt,
                 ^.y := (stripHeight - rectangleHeight)/2,
                 ^.width := widthPx.toInt,
                 ^.height := rectangleHeight.toInt,
-                className := s"${run.jenkinsBuildStatus.entryName.toLowerCase} build_rect",
+                className := s"build_rect",
                 //todo add length
                 //todo not have ended when building
                 //todo replace this with jQuery or sg similar and make it pop up immediately not after delay and not browser dependent way
-                <.title(s"Id: ${run.buildNumber.i}\nStart: ${run.buildStart}\nFinish: ${run.buildFinish}\nStatus: ${run.jenkinsBuildStatus}")
-              ))
+                <.title(s"Id: ${run.buildNumber.i}\nStart: ${run.buildStart}\nFinish: ${run.buildFinish}\nStatus: ${run.buildStatus}")
+              )
+              Some(<.rect(nonStyle ++ style: _*))
             } else
               None
             buildRectangle.toList

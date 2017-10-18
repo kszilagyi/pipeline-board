@@ -41,7 +41,8 @@ object Settings {
       "com.beachape" %%% "enumeratum-circe" % enumeratumVersion,
       "com.lihaoyi" %%% "utest" % uTest % Test,
       "io.lemonlabs" %%% "scala-uri" % "0.5.0",
-      "biz.enef" %%% "slogging" % "0.5.2"
+      "biz.enef" %%% "slogging" % "0.5.2",
+      "com.github.japgolly.scalacss" %%% "core" % scalaCSS
     ) ++ Seq(
       "io.circe" %%% "circe-core",
       "io.circe" %%% "circe-generic",

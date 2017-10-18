@@ -1,27 +1,7 @@
-.success {
-    fill: green
-}
 
-.failure {
-    fill: red
-}
-
-.building {
-    fill: grey;
-    animation: blinker 2s linear infinite;
-}
-
-.aborted {
-    fill: purple;
-}
 
 
 .build_rect:hover {
   opacity: 0.7
 }
 
-@keyframes blinker {
-  from { visibility: hidden }
-  50% { visibility: hidden }
-  to   { visibility: visible }
-}

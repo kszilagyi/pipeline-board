@@ -95,7 +95,8 @@ class JenkinsFetcher (ws: WSClient, override val name: String,
               .map { buildInfo =>
                 val startTime = Instant.ofEpochMilli(buildInfo.timestamp)
                 val endTime = startTime.plusMillis(buildInfo.duration.toLong)
-                JenkinsBuildInfo(buildInfo.result.getOrElse(JenkinsBuildStatus.Building), startTime, endTime, buildNumber)
+                BuildInfo(buildInfo.result.getOrElse(JenkinsBuildStatus.Building).toBuildStatus,
+                  startTime, endTime, buildNumber)
               }
             ).lift noThrowingMap  {
               case Failure(exception) => Left(ResponseError.failedToConnect(exception))

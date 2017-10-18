@@ -14,6 +14,7 @@ import play.api.mvc._
 
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext
+import CssSettings.settings._
 
 
 class Application @Inject() (wsClient: WSClient)(val config: Configuration)
@@ -21,6 +22,10 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
 
   def root: Action[AnyContent] = Action {
     Ok(views.html.index("Pipeline monitor")(config))
+  }
+
+  def css: Action[AnyContent] = Action {
+    Ok(MyStyles.render).as(CSS)
   }
 
 
