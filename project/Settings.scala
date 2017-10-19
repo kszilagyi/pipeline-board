@@ -59,6 +59,7 @@ object Settings {
     "com.typesafe.akka" %% "akka-typed" % "2.5.6",
     "biz.enef" %% "slogging-slf4j" % "0.5.2",
     "org.slf4j" % "slf4j-simple" % "1.7.+",
+    "net.jcazevedo" %% "moultingyaml" % "0.4.0",
     guice, ws
   ))
 
