@@ -9,6 +9,7 @@ import io.circe.generic.JsonCodec
 import io.circe.{Decoder, Encoder, Error}
 import slogging.LazyLogging
 import io.circe.disjunctionCodecs._
+import com.netaporter.uri.dsl._
 import UriEncoders._
 import cats.syntax.either.{catsSyntaxEither, catsSyntaxEitherObject}
 import enumeratum.{CirceEnum, Enum, EnumEntry}
@@ -42,24 +43,35 @@ object UriEncoders {
   implicit val uriEncoder: Encoder[Uri] = Encoder.encodeString.contramap[Uri](_.toString)
 }
 
+@JsonCodec final case class UserRoot(u: Uri)
 
-@JsonCodec final case class JobUrl(u: Uri) {
-  def buildInfo(buildNumber: BuildNumber): Uri = u /  buildNumber.i.toString
-}
+@JsonCodec final case class RestRoot(u: Uri)
+
+@JsonCodec final case class Urls(userRoot: UserRoot, restRoot: RestRoot)
 
 @JsonCodec final case class JobName(s: String)
 
-sealed trait JobType extends EnumEntry
+sealed trait JobType extends EnumEntry {
+  def buildInfo(urls: Urls, n: BuildNumber): Uri
+}
 
 object JobType extends Enum[JobType] with CirceEnum[JobType] {
-  case object GitLabCi extends JobType
-  case object Jenkins extends JobType
+  case object GitLabCi extends JobType {
+    def buildInfo(urls: Urls, n: BuildNumber): Uri = ???
+  }
+  case object Jenkins extends JobType {
+    def buildInfo(urls: Urls, n: BuildNumber): Uri = {
+      urls.userRoot.u / n.i.toString / "api/json"
+    }
+  }
 
   def values: immutable.IndexedSeq[JobType] = findValues
 }
 
 
-@JsonCodec final case class Job(name: JobName, uri: JobUrl, tpe: JobType)
+@JsonCodec final case class Job(name: JobName, urls: Urls, tpe: JobType) {
+  def buildInfo(n: BuildNumber): Uri = tpe.buildInfo(urls, n)
+}
 
 @JsonCodec final case class JobDetails(request: Job, r: Either[ResponseError, Seq[scala.Either[ResponseError, BuildInfo]]])
 

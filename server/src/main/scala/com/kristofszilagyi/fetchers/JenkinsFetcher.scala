@@ -42,8 +42,6 @@ object JenkinsFetcher {
 
   private final case class JobsInfoWithoutBuildInfo(replyTo: ActorRef[FetcherResult], results: Seq[Either[JobDetails, JenkinsFetcher.JobInfoWithoutBuildInfo]]) extends FetcherIncoming
 
-  private def restify(u: Uri) = u / "api/json" ? "pretty=true"
-
   @SuppressWarnings(Array(Wart.AsInstanceOf))
   private def safeRead[T: Decoder](response: WSResponse): Either[ResponseError, T] = {
     if (response.status !=== 200) Left(ResponseError.invalidResponseCode(response))
@@ -65,9 +63,8 @@ class JenkinsFetcher (ws: WSClient, override val name: String,
     msg match {
       case Fetch(replyTo) =>
         def fetchJobDetails(job: Job) = {
-          val jobUrl = job.uri.u
-          val destination = restify(jobUrl)
-          ws.url(destination).get.map { safeRead[PartialJenkinsJobInfo] }.lift.noThrowingMap{
+          val jobUrl = job.urls.restRoot.u
+          ws.url(jobUrl).get.map { safeRead[PartialJenkinsJobInfo] }.lift.noThrowingMap{
             case Success(maybePartialJenkinsJobInfo) => maybePartialJenkinsJobInfo match {
               case Left(error) => Left(JobDetails(job, Left(error)))
               case Right(jenkinsJobInfo) => Right(JobInfoWithoutBuildInfo(
@@ -90,7 +87,7 @@ class JenkinsFetcher (ws: WSClient, override val name: String,
       case JobsInfoWithoutBuildInfo(replyTo, jobs) =>
         def fetchBuildResults(job: Job, buildNumbers: Seq[BuildNumber]) = {
           val buildInfoFutures = buildNumbers.map { buildNumber =>
-            val destination = restify(job.uri.buildInfo(buildNumber))
+            val destination = job.buildInfo(buildNumber)
             ws.url(destination).get.map(result => safeRead[PartialDetailedBuildInfo](result)
               .map { buildInfo =>
                 val startTime = Instant.ofEpochMilli(buildInfo.timestamp)

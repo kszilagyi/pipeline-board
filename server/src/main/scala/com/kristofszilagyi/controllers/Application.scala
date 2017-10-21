@@ -12,7 +12,7 @@ import net.jcazevedo.moultingyaml.PimpedString
 import play.api.Configuration
 import play.api.libs.ws.WSClient
 import play.api.mvc._
-
+import com.netaporter.uri.dsl._
 import scala.concurrent.ExecutionContext
 import scala.io.Source
 
@@ -37,8 +37,10 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
     val configPath = s"$home/.pipeline_monitor/config"
     val config = Config.format.read(Source.fromFile(configPath).mkString.parseYaml)
     val aggregator = new Aggregator(Seq(new JenkinsFetcher(wsClient, "jenkins",
-      config.jenkins.jobs.map(jobConfig => Job(jobConfig.name, jobConfig.url, Jenkins))))
-    )
+      config.jenkins.jobs.map(jobConfig =>
+        Job(jobConfig.name, Urls(userRoot = jobConfig.url,restRoot = RestRoot(jobConfig.url.u / "api/json")), Jenkins)
+      )
+    )))
     val resultCache = new ResultCache(aggregator.behavior)
     new AutowireServer(new AutowireApiImpl(resultCache))
   }

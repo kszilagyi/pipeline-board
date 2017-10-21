@@ -119,7 +119,7 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
       //todo show warning if some of the queries failed
       val labels = ciState.results.zipWithIndex.map { case (jobState, idx) =>
         a(
-          href := jobState.request.uri.u.toString(),
+          href := jobState.request.urls.userRoot.u.toString(),
           target := "_blank",
           <.text(
             ^.x := labelEndPx,
