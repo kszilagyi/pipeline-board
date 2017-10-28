@@ -9,5 +9,5 @@ import io.circe.java8.time._
 
 @JsonCodec final case class BuildInfo(buildStatus: BuildStatus,
                                       buildStart: Instant,
-                                      buildFinish: Instant,
+                                      buildFinish: Option[Instant],
                                       buildNumber: BuildNumber)

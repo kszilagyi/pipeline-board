@@ -3,17 +3,17 @@ package com.kristofszilagyi
 import java.time.Instant
 
 import akka.actor.Scheduler
-import akka.typed.{ActorRef, ActorSystem, Behavior}
 import akka.typed.scaladsl.Actor
-import com.kristofszilagyi.cache.{AllFetchFinished, FetchCached, ResultCache}
-import com.kristofszilagyi.fetchers.Fetcher
-import com.kristofszilagyi.shared.{AllResult, FetcherResult}
 import akka.typed.scaladsl.AskPattern._
+import akka.typed.{ActorRef, Behavior}
 import akka.util.Timeout
+import com.kristofszilagyi.cache.AllFetchFinished
+import com.kristofszilagyi.fetchers.Fetcher
 import com.kristofszilagyi.fetchers.JenkinsFetcher.Fetch
+import com.kristofszilagyi.shared.{AllResult, FetcherResult}
 
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.DurationDouble
+import scala.concurrent.{ExecutionContext, Future}
 
 sealed trait AggregatorIncoming
 final case class FetchAll(sender: ActorRef[AllFetchFinished]) extends AggregatorIncoming

@@ -49,28 +49,33 @@ object UriEncoders {
 
 @JsonCodec final case class Urls(userRoot: UserRoot, restRoot: RestRoot)
 
-@JsonCodec final case class JobName(s: String)
+@JsonCodec final case class JobDisplayName(s: String)
 
 sealed trait JobType extends EnumEntry {
+  def jobInfo(urls: Urls): Uri
   def buildInfo(urls: Urls, n: BuildNumber): Uri
 }
 
 object JobType extends Enum[JobType] with CirceEnum[JobType] {
   case object GitLabCi extends JobType {
     def buildInfo(urls: Urls, n: BuildNumber): Uri = ???
+    def jobInfo(urls: Urls): Uri = ???
   }
   case object Jenkins extends JobType {
     def buildInfo(urls: Urls, n: BuildNumber): Uri = {
       urls.userRoot.u / n.i.toString / "api/json"
     }
+
+    def jobInfo(urls: Urls): Uri = urls.restRoot.u
   }
 
   def values: immutable.IndexedSeq[JobType] = findValues
 }
 
 
-@JsonCodec final case class Job(name: JobName, urls: Urls, tpe: JobType) {
+@JsonCodec final case class Job(name: JobDisplayName, urls: Urls, tpe: JobType) {
   def buildInfo(n: BuildNumber): Uri = tpe.buildInfo(urls, n)
+  def jobInfo: Uri = tpe.jobInfo(urls)
 }
 
 @JsonCodec final case class JobDetails(request: Job, r: Either[ResponseError, Seq[scala.Either[ResponseError, BuildInfo]]])
