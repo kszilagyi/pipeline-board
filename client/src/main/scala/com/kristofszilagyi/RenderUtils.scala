@@ -12,13 +12,14 @@ import japgolly.scalajs.react.vdom.svg_<^._
 import japgolly.scalajs.react.vdom.{SvgTagOf => _, TagMod => _, _}
 import org.scalajs.dom.raw._
 import org.scalajs.dom.svg.{A, G, SVG}
+import slogging.LazyLogging
 
 import scala.collection.immutable
 import scala.concurrent.duration.{DurationLong, FiniteDuration}
 import scalacss.ScalaCssReact._
 
 @SuppressWarnings(Array(Wart.Overloading))
-object RenderUtils {
+object RenderUtils extends LazyLogging {
 
   def alignmentBaseline: VdomAttr[Any] = VdomAttr("alignmentBaseline")
 
@@ -140,7 +141,7 @@ object RenderUtils {
 
               val nonStyle = List(
                 ^.x := startPx.toInt,
-                ^.y := (stripHeight - rectangleHeight)/2,
+                ^.y := (stripHeight - rectangleHeight) / 2,
                 ^.width := widthPx.toInt,
                 ^.height := rectangleHeight.toInt,
                 className := s"build_rect",
@@ -153,8 +154,8 @@ object RenderUtils {
             } else
               None
             buildRectangle.toList
-          case Left(value) =>
-            //todo do sg
+          case Left(error) =>
+            logger.warn(s"Build failed to query: ${error.s}")
             None.toList
         })
     }

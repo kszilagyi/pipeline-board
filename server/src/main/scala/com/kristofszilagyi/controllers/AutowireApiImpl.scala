@@ -14,7 +14,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class AutowireApiImpl(resultCache: ResultCache) extends AutowireApi {
   private implicit val timeout: Timeout = Timeout(10.seconds)
-  private val system = ActorSystem(resultCache.behaviour, "pipeline-monitor")
+  private val system = ActorSystem(resultCache.behaviour, "pipeline-board")
   private implicit val scheduler: Scheduler = system.scheduler
   private implicit val ec: ExecutionContext = system.executionContext
 

@@ -12,7 +12,7 @@ import japgolly.scalajs.react.vdom.svg_<^.{<, _}
 import japgolly.scalajs.react.{BackendScope, Callback, CallbackTo, ScalaComponent}
 import org.scalajs.dom.raw.{HTMLElement, SVGElement}
 import slogging.LazyLogging
-
+import TypeSafeEqualsOps._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration.Infinite
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
@@ -118,30 +118,50 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
       )
       //todo show warning if some of the queries failed
       val labels = ciState.results.zipWithIndex.map { case (jobState, idx) =>
-        a(
-          href := jobState.request.urls.userRoot.u.toString(),
-          target := "_blank",
-          <.text(
-            ^.x := labelEndPx,
-            ^.y := textBaseLine(idx),
-            ^.textAnchor := "end",
-            ^.fill := "black",
-            textDecoration := "underline",
-            jobState.request.name.s
+        val numberOfErrors = jobState.r.getOrElse(Seq.empty).map(_.isLeft).count(_ ==== true)
+        val warningMsg = if (numberOfErrors > 0) {
+          "\u26A0 "
+        } else ""
+
+
+        <.text(
+          ^.x := labelEndPx,
+          ^.y := textBaseLine(idx),
+          ^.textAnchor := "end",
+          <.tspan(
+            ^.fill := "red",
+            <.title(s"$numberOfErrors build was not shown due to errors. Please check out the JavaScript console for details."),
+            warningMsg,
+          ),
+          a(
+            href := jobState.request.urls.userRoot.u.toString(),
+            target := "_blank",
+            <.tspan(
+              textDecoration := "underline",
+              ^.fill := "black",
+              jobState.request.name.s
+            )
           )
         )
+
       }
 
       //todo add links to labels and builds
-      val drawObjs = ciState.results.zipWithIndex.flatMap { case (jobState, idx) =>
-
+      val drawObjs = ciState.results.zipWithIndex.map { case (jobState, idx) =>
         val oneStrip = nestAt(
-          x = labelEndPx, y = backgroundBaseLine(idx),
-          elements = List(strip(jobAreaWidthPx = jobAreaWidthPx, stripHeight = space, colors(idx % colors.size),
-            jobRectanges(jobState = jobState, jobArea = jobArea, rectangleHeight = (space * 0.75).toInt,
-              stripHeight = space)))
+          x = labelEndPx,
+          y = backgroundBaseLine(idx),
+          elements = List(
+            strip(
+              jobAreaWidthPx = jobAreaWidthPx,
+              stripHeight = space,
+              colors(idx % colors.size),
+              jobRectanges(jobState = jobState, jobArea = jobArea, rectangleHeight = (space * 0.75).toInt,
+                stripHeight = space)
+            )
+          )
         )
-        List(oneStrip)
+        oneStrip
       }
       val rightMargin = 100
       val wheelListener = html_<^.^.onWheel ==> handleWheel

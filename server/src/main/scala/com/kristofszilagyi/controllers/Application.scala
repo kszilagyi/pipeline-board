@@ -22,7 +22,7 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
                                              (implicit ec: ExecutionContext) extends InjectedController {
 
   def root: Action[AnyContent] = Action {
-    Ok(views.html.index("Pipeline monitor")(config))
+    Ok(views.html.index("Pipeline board")(config))
   }
 
   def css: Action[AnyContent] = Action {
@@ -35,7 +35,7 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
     //todo fix for other OS
     //todo rename with project rename
     val home = System.getenv("HOME")
-    val configPath = s"$home/.pipeline_monitor/config"
+    val configPath = s"$home/.pipeline_board/config"
     val config = Config.format.read(Source.fromFile(configPath).mkString.parseYaml)
     val jenkinsJobs = config.jenkins.jobs.map(jobConfig =>
       Job(jobConfig.name, Urls(userRoot = jobConfig.url,restRoot = RestRoot(jobConfig.url.u / "api/json")), Jenkins)

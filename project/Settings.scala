@@ -6,7 +6,7 @@ import play.sbt.PlayImport.ws
 import sbt.Keys.libraryDependencies
 
 object Settings {
-  val name = "pipeline-monitor"
+  val name = "pipeline-board"
 
   /** The version of your application */
   val version = "0.0.1"
