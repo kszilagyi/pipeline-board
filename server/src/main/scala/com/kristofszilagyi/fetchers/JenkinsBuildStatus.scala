@@ -1,7 +1,8 @@
 package com.kristofszilagyi.fetchers
 
 import com.kristofszilagyi.shared.BuildStatus
-import enumeratum.{CirceEnum, Enum, EnumEntry}
+import com.kristofszilagyi.utils.TolerantCirceEnum
+import enumeratum.{Enum, EnumEntry}
 
 import scala.collection.immutable
 
@@ -9,7 +10,7 @@ sealed abstract class JenkinsBuildStatus extends EnumEntry {
   def toBuildStatus: BuildStatus
 }
 
-object JenkinsBuildStatus extends Enum[JenkinsBuildStatus] with CirceEnum[JenkinsBuildStatus] {
+object JenkinsBuildStatus extends Enum[JenkinsBuildStatus] with TolerantCirceEnum[JenkinsBuildStatus] {
   val values: immutable.IndexedSeq[JenkinsBuildStatus] = findValues
 
   case object Building extends JenkinsBuildStatus {
@@ -23,5 +24,8 @@ object JenkinsBuildStatus extends Enum[JenkinsBuildStatus] with CirceEnum[Jenkin
   }
   case object Aborted extends JenkinsBuildStatus {
     def toBuildStatus: BuildStatus = BuildStatus.Aborted
+  }
+  case object Unstable extends JenkinsBuildStatus {
+    def toBuildStatus: BuildStatus = BuildStatus.Unstable
   }
 }

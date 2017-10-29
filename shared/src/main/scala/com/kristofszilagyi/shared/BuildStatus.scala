@@ -15,4 +15,5 @@ object BuildStatus extends Enum[BuildStatus] with CirceEnum[BuildStatus] {
   case object Failed extends BuildStatus
   case object Successful extends BuildStatus
   case object Aborted extends BuildStatus
+  case object Unstable extends BuildStatus
 }

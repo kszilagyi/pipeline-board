@@ -3,7 +3,7 @@ package com.kristofszilagyi
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZoneId}
 
-import com.kristofszilagyi.shared.BuildStatus.{Aborted, Building, Created, Failed, Pending, Successful}
+import com.kristofszilagyi.shared.BuildStatus.{Aborted, Building, Created, Failed, Pending, Successful, Unstable}
 import com.kristofszilagyi.shared.InstantOps._
 import com.kristofszilagyi.shared.ZonedDateTimeOps._
 import com.kristofszilagyi.shared.{JobDetails, MyStyles, Wart}
@@ -137,8 +137,10 @@ object RenderUtils extends LazyLogging {
                 case Failed => List(MyStyles.failed)
                 case Successful => List(MyStyles.success)
                 case Aborted => List(MyStyles.aborted)
+                case Unstable => List(MyStyles.unstable)
               }
 
+              val finishString = run.maybeBuildFinish.map(time => s"Finish: $time\n").getOrElse("")
               val nonStyle = List(
                 ^.x := startPx.toInt,
                 ^.y := (stripHeight - rectangleHeight) / 2,
@@ -146,9 +148,8 @@ object RenderUtils extends LazyLogging {
                 ^.height := rectangleHeight.toInt,
                 className := s"build_rect",
                 //todo add length
-                //todo not have ended when building
                 //todo replace this with jQuery or sg similar and make it pop up immediately not after delay and not browser dependent way
-                <.title(s"Id: ${run.buildNumber.i}\nStart: ${run.buildStart}\nFinish: ${run.maybeBuildFinish}\nStatus: ${run.buildStatus}")
+                <.title(s"Id: ${run.buildNumber.i}\nStart: ${run.buildStart}\n${finishString}Status: ${run.buildStatus}")
               )
               Some(<.rect(nonStyle ++ style: _*))
             } else

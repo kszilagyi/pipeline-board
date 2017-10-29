@@ -1,7 +1,8 @@
 package com.kristofszilagyi.fetchers
 
 import com.kristofszilagyi.shared.BuildStatus
-import enumeratum.{CirceEnum, Enum, EnumEntry}
+import com.kristofszilagyi.utils.TolerantCirceEnum
+import enumeratum.{Enum, EnumEntry}
 
 import scala.collection.immutable
 
@@ -12,7 +13,7 @@ sealed trait DisplayableGitLabCiStatus extends GitLabCiBuildStatus {
   def toBuildStatus: BuildStatus
 }
 //created, pending, running, failed, success, canceled, skipped, manual
-object GitLabCiBuildStatus extends Enum[GitLabCiBuildStatus] with CirceEnum[GitLabCiBuildStatus] {
+object GitLabCiBuildStatus extends Enum[GitLabCiBuildStatus] with TolerantCirceEnum[GitLabCiBuildStatus] {
   val values: immutable.IndexedSeq[GitLabCiBuildStatus] = findValues
 
   case object Created extends DisplayableGitLabCiStatus {

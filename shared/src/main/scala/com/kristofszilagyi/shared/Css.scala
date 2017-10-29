@@ -40,4 +40,6 @@ object MyStyles extends StyleSheet.Inline {
   val success = style(svgFill := green)
 
   val aborted = style(svgFill := purple)
+
+  val unstable = style(svgFill := pink)
 }
