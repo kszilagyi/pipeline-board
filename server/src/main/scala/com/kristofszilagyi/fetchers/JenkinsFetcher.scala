@@ -14,7 +14,7 @@ import io.circe._
 import io.circe.generic.JsonCodec
 import shapeless.{:+:, CNil, |∨|}
 import slogging.LazyLogging
-
+import TypeSafeEqualsOps._
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success}
 
@@ -55,18 +55,21 @@ final class JenkinsFetcher (ws: WSClient,
     def fetchBuildResults(job: Job, buildNumbers: Seq[BuildNumber]) = {
       val buildInfoFutures = buildNumbers.map { buildNumber =>
         val destination = job.buildInfo(buildNumber)
-        ws.url(destination).get.map(result => safeRead[PartialDetailedBuildInfo](result)
+        ws.url(destination).get.map(result => safeRead[PartialDetailedBuildInfo](destination, result)
           .map { buildInfo =>
+            val buildStatus = buildInfo.result.getOrElse(JenkinsBuildStatus.Building).toBuildStatus
             val startTime = Instant.ofEpochMilli(buildInfo.timestamp)
-            val endTime = startTime.plusMillis(buildInfo.duration.toLong) //todo make this None in case of building
-            BuildInfo(buildInfo.result.getOrElse(JenkinsBuildStatus.Building).toBuildStatus,
-              startTime, Some(endTime), buildNumber)
+            val endTime = if (buildStatus !=== BuildStatus.Building) Some(startTime.plusMillis(buildInfo.duration.toLong))
+            else None
+            BuildInfo(buildStatus,
+              startTime, endTime, buildNumber)
           }
         ).lift noThrowingMap  {
-          case Failure(exception) => Left(ResponseError.failedToConnect(exception))
+          case Failure(exception) => Left(ResponseError.failedToConnect(destination, exception))
           case Success(value) => value
         }
       }
+
       Utopia.sequence(buildInfoFutures) noThrowingMap { buildInfo =>
         JobDetails(job, Right(buildInfo))
       }
@@ -87,7 +90,7 @@ final class JenkinsFetcher (ws: WSClient,
       case Fetch(replyTo) =>
         def fetchJobDetails(job: Job) = {
           val jobUrl = job.jobInfo
-          ws.url(jobUrl).get.map { safeRead[PartialJobInfo] }.lift.noThrowingMap{
+          ws.url(jobUrl).get.map(safeRead[PartialJobInfo](jobUrl, _)).lift.noThrowingMap{
             case Success(maybePartialJenkinsJobInfo) => maybePartialJenkinsJobInfo match {
               case Left(error) => Left(JobDetails(job, Left(error)))
               case Right(jenkinsJobInfo) => Right(JobInfoWithoutBuildInfo(
@@ -95,7 +98,7 @@ final class JenkinsFetcher (ws: WSClient,
                 jenkinsJobInfo.builds.map(partialBuildInfo => BuildNumber(partialBuildInfo.number))
               ))
             }
-            case Failure(t) => Left(JobDetails(job, Left(ResponseError.failedToConnect(t))))
+            case Failure(t) => Left(JobDetails(job, Left(ResponseError.failedToConnect(jobUrl, t))))
           }
         }
 

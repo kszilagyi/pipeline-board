@@ -40,7 +40,7 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
     val jenkinsJobs = config.jenkins.jobs.map(jobConfig =>
       Job(jobConfig.name, Urls(userRoot = jobConfig.url,restRoot = RestRoot(jobConfig.url.u / "api/json")), Jenkins)
     )
-    val gitLabJobs = config.gitLab.jobs.map(jobConfig =>
+    val gitLabJobs = config.gitLabCi.jobs.map(jobConfig =>
       GitLabCiJob(
         Job(jobConfig.name, Urls(userRoot = jobConfig.userUrl, restRoot = jobConfig.restRoot), GitLabCi),
         jobConfig.accessToken, jobConfig.jobNameOnGitLab

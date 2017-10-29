@@ -28,8 +28,8 @@ object ResponseError extends LazyLogging{
     ResponseError(msg)
   }
 
-  def failedToConnect(ex: Throwable): ResponseError = {
-    val msg = "Request failed with exception: " + ex.getMessage
+  def failedToConnect(uri: Uri, ex: Throwable): ResponseError = {
+    val msg = s"Request [$uri] failed with exception: " + ex.getMessage
     logger.warn(msg)
     ResponseError(msg)
   }
@@ -59,7 +59,9 @@ sealed trait JobType extends EnumEntry {
 object JobType extends Enum[JobType] with CirceEnum[JobType] {
   case object GitLabCi extends JobType {
     def buildInfo(urls: Urls, n: BuildNumber): Uri = ???
-    def jobInfo(urls: Urls): Uri = ???
+    def jobInfo(urls: Urls): Uri = {
+      urls.restRoot.u / "jobs" ? ("per_page" -> 100)
+    }
   }
   case object Jenkins extends JobType {
     def buildInfo(urls: Urls, n: BuildNumber): Uri = {
@@ -74,7 +76,7 @@ object JobType extends Enum[JobType] with CirceEnum[JobType] {
 
 
 @JsonCodec final case class Job(name: JobDisplayName, urls: Urls, tpe: JobType) {
-  def buildInfo(n: BuildNumber): Uri = tpe.buildInfo(urls, n)
+  def buildInfo(n: BuildNumber): Uri = tpe.buildInfo(urls, n) //todo this is not implemented on git lab ci, refactor
   def jobInfo: Uri = tpe.jobInfo(urls)
 }
 

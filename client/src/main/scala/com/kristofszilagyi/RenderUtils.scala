@@ -3,9 +3,8 @@ package com.kristofszilagyi
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZoneId}
 
-import com.kristofszilagyi.shared.BuildStatus.{Aborted, Building, Failed, Successful}
+import com.kristofszilagyi.shared.BuildStatus.{Aborted, Building, Created, Failed, Pending, Successful}
 import com.kristofszilagyi.shared.InstantOps._
-import com.kristofszilagyi.shared.TypeSafeEqualsOps._
 import com.kristofszilagyi.shared.ZonedDateTimeOps._
 import com.kristofszilagyi.shared.{JobDetails, MyStyles, Wart}
 import japgolly.scalajs.react.vdom.PackageBase.VdomAttr
@@ -113,18 +112,17 @@ object RenderUtils {
         runs.flatMap(either => either match {
           case Right(run) =>
             val startRelativeToDrawingAreaBeginning = (run.buildStart - jobArea.startTime).max(0.seconds)
-            val endRelativeToDrawingAreaBeginning = (run.buildFinish - jobArea.startTime).min(jobArea.length)
-            //todo deal with more than a day longer
-            //todo deal with partially inside
+            val endRelativeToDrawingAreaBeginning = run.maybeBuildFinish match {
+              case Some(buildFinish) => (buildFinish - jobArea.startTime).min(jobArea.length)
+              case None => jobArea.length
+            }
+
             val buildRectangle = if (endRelativeToDrawingAreaBeginning.toNanos > 0 &&
               startRelativeToDrawingAreaBeginning < jobArea.length) {
 
               val relativeStartRatio = startRelativeToDrawingAreaBeginning / jobArea.length
-              val relativeEndRatio = if (run.buildStatus ==== Building) {
-                1.0
-              } else {
-                endRelativeToDrawingAreaBeginning / jobArea.length
-              }
+              val relativeEndRatio = endRelativeToDrawingAreaBeginning / jobArea.length
+
               val relativeWidthRatio = relativeEndRatio - relativeStartRatio //todo assert if this is negative, also round up to >10?
               val startPx = relativeStartRatio * jobArea.widthPx
               //todo this will go out of the drawing area, fix
@@ -132,6 +130,8 @@ object RenderUtils {
               //todo header, colors, hovering, zooming, horizontal lines, click
 
               val style: List[TagMod] = run.buildStatus match {
+                case Created => List(MyStyles.created)
+                case Pending => List(MyStyles.pending)
                 case Building => List(MyStyles.building)
                 case Failed => List(MyStyles.failed)
                 case Successful => List(MyStyles.success)
@@ -147,7 +147,7 @@ object RenderUtils {
                 //todo add length
                 //todo not have ended when building
                 //todo replace this with jQuery or sg similar and make it pop up immediately not after delay and not browser dependent way
-                <.title(s"Id: ${run.buildNumber.i}\nStart: ${run.buildStart}\nFinish: ${run.buildFinish}\nStatus: ${run.buildStatus}")
+                <.title(s"Id: ${run.buildNumber.i}\nStart: ${run.buildStart}\nFinish: ${run.maybeBuildFinish}\nStatus: ${run.buildStatus}")
               )
               Some(<.rect(nonStyle ++ style: _*))
             } else

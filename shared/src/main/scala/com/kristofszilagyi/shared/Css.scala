@@ -21,6 +21,9 @@ object MyStyles extends StyleSheet.Inline {
 
   //^.style := (animation := "blinker 2s linear infinite")*/
 
+  val created = style(svgFill := yellow)
+
+  val pending = style(svgFill := orange)
 
   val building = style(
     svgFill := grey,

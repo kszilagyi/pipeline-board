@@ -10,7 +10,7 @@ import com.kristofszilagyi.shared._
 import com.netaporter.uri.Uri
 import com.netaporter.uri.dsl._
 import io.circe.generic.JsonCodec
-import play.api.libs.ws.WSClient
+import play.api.libs.ws.{WSClient, WSRequest}
 import slogging.LazyLogging
 import GitLabCiFetcher._
 import TypeSafeEqualsOps._
@@ -22,9 +22,14 @@ import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success}
 
 
-final case class GitLabCiJob(common: Job, accessToken: Option[GitLabCiAccessToken], jobNameOnGitLab: JobNameOnGitLab) {
-  def buildInfo(n: BuildNumber): Uri = common.buildInfo(n)
+final case class GitLabCiJob(common: Job, maybeAccessToken: Option[GitLabCiAccessToken], jobNameOnGitLab: JobNameOnGitLab) {
   def jobInfo: Uri = common.jobInfo
+  def authenticatedRestRequest(ws: WSClient): WSRequest = {
+    val headers = maybeAccessToken.map { accessToken =>
+      "PRIVATE-TOKEN" -> accessToken.s
+    }.toList
+    ws.url(jobInfo).withHttpHeaders(headers: _*)
+  }
 }
 
 object GitLabCiFetcher {
@@ -51,7 +56,7 @@ final class GitLabCiFetcher(ws: WSClient,
     msg match {
       case Fetch(replyTo) =>
         val results = jobsToFetch.map { job =>
-          val allbuildsForProjectFut = ws.url(job.jobInfo).get.map(safeRead[PartialJobsInfo])
+          val allbuildsForProjectFut = job.authenticatedRestRequest(ws).get.map(safeRead[PartialJobsInfo](job.jobInfo, _))
           val buildsWithRightNameFut = allbuildsForProjectFut.map{ allBuildsForProject =>
             allBuildsForProject.map(_.filter(_.name ==== job.jobNameOnGitLab.s))
           }
@@ -60,13 +65,13 @@ final class GitLabCiFetcher(ws: WSClient,
               build.status match {
                 case status: DisplayableGitLabCiStatus =>
                   Some(Right(BuildInfo(status.toBuildStatus, buildStart = build.created_at,
-                    buildFinish = build.finished_at, build.buildNumber))).toList
+                    maybeBuildFinish = build.finished_at, build.buildNumber))).toList
                 case _ => None.toList
               }
             })
           }
           buildsFut.lift noThrowingMap {
-            case Failure(ex) => JobDetails(job.common, Left(ResponseError.failedToConnect(ex)))
+            case Failure(ex) => JobDetails(job.common, Left(ResponseError.failedToConnect(job.jobInfo, ex)))
             case Success(builds) => JobDetails(job.common, builds)
           }
         }
