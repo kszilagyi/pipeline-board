@@ -13,13 +13,16 @@ import play.api.Configuration
 import play.api.libs.ws.WSClient
 import play.api.mvc._
 import com.netaporter.uri.dsl._
+import slogging.{LazyLogging, LoggerConfig, PrintLoggerFactory}
 
 import scala.concurrent.ExecutionContext
 import scala.io.Source
 
 
 class Application @Inject() (wsClient: WSClient)(val config: Configuration)
-                                             (implicit ec: ExecutionContext) extends InjectedController {
+                                             (implicit ec: ExecutionContext) extends InjectedController with LazyLogging{
+
+  LoggerConfig.factory = PrintLoggerFactory()
 
   def root: Action[AnyContent] = Action {
     Ok(views.html.index("Pipeline board")(config))
@@ -37,6 +40,7 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
     val home = System.getenv("HOME")
     val configPath = s"$home/.pipeline_board/config"
     val config = Config.format.read(Source.fromFile(configPath).mkString.parseYaml)
+    logger.info(s"Congif is: $config")
     val jenkinsJobs = config.jenkins.jobs.map(jobConfig =>
       Job(jobConfig.name, Urls(userRoot = jobConfig.url,restRoot = RestRoot(jobConfig.url.u / "api/json")), Jenkins)
     )
