@@ -1,5 +1,5 @@
 package com.kristofszilagyi.controllers
-import com.kristofszilagyi.shared.{JobDisplayName, RestRoot, UserRoot}
+import com.kristofszilagyi.shared.{JobDisplayName, RawUrl, RestRoot, UserRoot}
 import com.netaporter.uri.Uri
 import net.jcazevedo.moultingyaml._
 import net.jcazevedo.moultingyaml.DefaultYamlProtocol._
@@ -14,8 +14,8 @@ object JobConfig {
   implicit val nameFormat: YamlFormat[JobDisplayName] = wrappedYamlString(JobDisplayName.apply)(_.s)
   implicit private val parseConfig: UriConfig = UriConfig(NoopEncoder, NoopDecoder)
 
-  implicit val urlUserFormat: YamlFormat[UserRoot] = wrappedYamlString(s => UserRoot(Uri.parse(s)))(_.u.toString)
-  implicit val urlRestFormat: YamlFormat[RestRoot] = wrappedYamlString(s => RestRoot(Uri.parse(s)))(_.u.toString)
+  implicit val urlUserFormat: YamlFormat[UserRoot] = wrappedYamlString(s => UserRoot(RawUrl(Uri.parse(s))))(_.u.rawString)
+  implicit val urlRestFormat: YamlFormat[RestRoot] = wrappedYamlString(s => RestRoot(RawUrl(Uri.parse(s))))(_.u.rawString)
 }
 
 object JenkinsJobConfig {

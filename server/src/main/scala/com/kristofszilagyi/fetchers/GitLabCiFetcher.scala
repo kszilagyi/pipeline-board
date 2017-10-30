@@ -23,13 +23,13 @@ import scala.util.{Failure, Success}
 
 
 final case class GitLabCiJob(common: Job, maybeAccessToken: Option[GitLabCiAccessToken], jobNameOnGitLab: JobNameOnGitLab) {
-  def jobInfo: Uri = common.jobInfo
+  def jobInfo: RawUrl = common.jobInfo
   def authenticatedRestRequest(ws: WSClient): WSRequest = {
     val headers = maybeAccessToken.map { accessToken =>
       "PRIVATE-TOKEN" -> accessToken.s
     }.toList
     //todo toStringRaw is too distributed!!!
-    ws.url(jobInfo.toStringRaw).withHttpHeaders(headers: _*)
+    ws.url(jobInfo.rawString).withHttpHeaders(headers: _*)
   }
 }
 

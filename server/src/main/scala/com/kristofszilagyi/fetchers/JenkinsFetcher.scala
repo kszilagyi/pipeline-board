@@ -55,7 +55,7 @@ final class JenkinsFetcher (ws: WSClient,
     def fetchBuildResults(job: Job, buildNumbers: Seq[BuildNumber]) = {
       val buildInfoFutures = buildNumbers.map { buildNumber =>
         val destination = job.buildInfo(buildNumber)
-        ws.url(destination.toStringRaw).get.map(result => safeRead[PartialDetailedBuildInfo](destination, result)
+        ws.url(destination.rawString).get.map(result => safeRead[PartialDetailedBuildInfo](destination, result)
           .map { buildInfo =>
             val buildStatus = buildInfo.result.getOrElse(JenkinsBuildStatus.Building).toBuildStatus
             val startTime = Instant.ofEpochMilli(buildInfo.timestamp)
@@ -89,8 +89,8 @@ final class JenkinsFetcher (ws: WSClient,
     msg match {
       case Fetch(replyTo) =>
         def fetchJobDetails(job: Job) = {
-          val jobUrl = job.jobInfo.toStringRaw
-          ws.url(jobUrl).get.map(safeRead[PartialJobInfo](jobUrl, _)).lift.noThrowingMap{
+          val jobUrl = job.jobInfo
+          ws.url(jobUrl.rawString).get.map(safeRead[PartialJobInfo](jobUrl, _)).lift.noThrowingMap{
             case Success(maybePartialJenkinsJobInfo) => maybePartialJenkinsJobInfo match {
               case Left(error) => Left(JobDetails(job, Left(error)))
               case Right(jenkinsJobInfo) => Right(JobInfoWithoutBuildInfo(

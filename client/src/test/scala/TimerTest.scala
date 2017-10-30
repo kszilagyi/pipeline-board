@@ -47,7 +47,7 @@ final class MockAutowire extends MockableAutowire {
               List(
                 JobDetails(
                   Job(
-                    JobDisplayName("something"), Urls(UserRoot(Uri.parse("example.com")), RestRoot(Uri.parse("sdom.com"))),
+                    JobDisplayName("something"), Urls(UserRoot(RawUrl(Uri.parse("example.com"))), RestRoot(RawUrl(Uri.parse("sdom.com")))),
                     JobType.Jenkins
                   ),
                   Right(Seq(Right(BuildInfo(Successful, Instant.now(), Some(Instant.now()), BuildNumber(1)))))

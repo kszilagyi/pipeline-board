@@ -134,7 +134,7 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
             warningMsg,
           ),
           a(
-            href := jobState.request.urls.userRoot.u.toString(),
+            href := jobState.request.urls.userRoot.u.rawString,
             target := "_blank",
             <.tspan(
               textDecoration := "underline",
