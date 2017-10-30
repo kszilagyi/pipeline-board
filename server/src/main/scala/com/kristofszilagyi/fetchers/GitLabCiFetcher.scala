@@ -28,7 +28,6 @@ final case class GitLabCiJob(common: Job, maybeAccessToken: Option[GitLabCiAcces
     val headers = maybeAccessToken.map { accessToken =>
       "PRIVATE-TOKEN" -> accessToken.s
     }.toList
-    //todo toStringRaw is too distributed!!!
     ws.url(jobInfo.rawString).withHttpHeaders(headers: _*)
   }
 }
@@ -39,7 +38,6 @@ object GitLabCiFetcher {
   object GitLabCiJson {
     import io.circe.java8.time._
 
-    //todo created is not a good measure because a job gets created whn the pipeline is created but a lot of thing might happen before
     @JsonCodec
     final case class PartialJobInfo(id: Int, name: String, created_at: Instant,
                                     started_at: Option[Instant], finished_at: Option[Instant],
@@ -66,7 +64,7 @@ final class GitLabCiFetcher(ws: WSClient,
             buildsWithRightName.map(_.flatMap { build =>
               build.status match {
                 case status: DisplayableGitLabCiStatus =>
-                  Some(Right(BuildInfo(status.toBuildStatus, buildStart = build.created_at,
+                  build.started_at.map(start => Right(BuildInfo(status.toBuildStatus, buildStart = start,
                     maybeBuildFinish = build.finished_at, build.buildNumber))).toList
                 case _ => None.toList
               }
