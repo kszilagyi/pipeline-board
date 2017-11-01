@@ -42,4 +42,11 @@ object MyStyles extends StyleSheet.Inline {
   val aborted = style(svgFill := purple)
 
   val unstable = style(svgFill := pink)
+
+  val labelEndPx = 300
+  val rightMargin = 100
+
+  val topLevelSvg = style(
+    height(1000.px)
+  )
 }

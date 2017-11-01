@@ -13,16 +13,20 @@ import japgolly.scalajs.react.{BackendScope, Callback, CallbackTo, ScalaComponen
 import org.scalajs.dom.raw.{HTMLElement, SVGElement}
 import slogging.LazyLogging
 import TypeSafeEqualsOps._
+import com.kristofszilagyi.Canvas.queryJobWindowWidth
+import com.kristofszilagyi.shared.MyStyles.{labelEndPx, rightMargin}
+import japgolly.scalajs.react.extra.{EventListener, OnUnmount}
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration.Infinite
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.scalajs.js
 
-final case class State(ciState: ResultAndTime, drawingAreaDuration: FiniteDuration,
+final case class State(windowWidthPx: Int, ciState: ResultAndTime, drawingAreaDuration: FiniteDuration,
                        endTime: Instant, mouseDownY: Option[Int], endTimeAtMouseDown: Instant, followTime: Boolean)
 
 final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireApi: MockableAutowire)
-                     (implicit ec: ExecutionContext) extends LazyLogging {
+                     (implicit ec: ExecutionContext) extends LazyLogging with OnUnmount {
   @SuppressWarnings(Array(Var))
   private var interval: Option[js.timers.SetIntervalHandle] = None
 
@@ -59,11 +63,10 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
     })
   }
 
-  private val jobAreaWidthPx = 1600
 
   def adjustEndTime(delta: Int): CallbackTo[Unit] = {
     $.modState(s => {
-      println(delta)
+      val jobAreaWidthPx = s.windowWidthPx
       val timeDelta = (delta.toDouble / jobAreaWidthPx) * s.drawingAreaDuration match {
         case _: Infinite => 0.seconds
         case f: FiniteDuration => f
@@ -93,9 +96,14 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
     interval = None
   }
 
-  def render(s: State): TagOf[HTMLElement] = {
+  def resized: Callback = {
+    $.modState(s => s.copy(windowWidthPx = Math.max(queryJobWindowWidth(), (labelEndPx + rightMargin + 100))))
+  }
 
-    val labelEndPx = 300
+
+  def render(s: State): TagOf[HTMLElement] = {
+    val windowWidthPx = s.windowWidthPx
+    val jobAreaWidthPx = windowWidthPx - labelEndPx - rightMargin
     val space = 50
     val first = 50
     val spaceContentRatio = 0.75
@@ -163,7 +171,6 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
         )
         oneStrip
       }
-      val rightMargin = 100
       val wheelListener = html_<^.^.onWheel ==> handleWheel
       val dragListeners = List(html_<^.^.onMouseDown ==> handleDown,
         html_<^.^.onMouseMove ==> handleMove,
@@ -171,8 +178,7 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
       )
 
       val groupedDrawObjs = <.g((drawObjs ++ dragListeners) :+ wheelListener: _*)
-      val svgParams = (labels :+ (^.width := jobAreaWidthPx + labelEndPx + rightMargin) :+
-        (^.height := 1000) :+ groupedDrawObjs) :+ verticleLines
+      val svgParams = labels ++ List(groupedDrawObjs, verticleLines, className := MyStyles.topLevelSvg.htmlClass, ^.width := windowWidthPx)
       val checkboxId = "follow"
       html_<^.<.div(
         html_<^.< input(
@@ -225,15 +231,20 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
 // which signal minutes, hours, days, weeks. months
 object Canvas {
 
+  def queryJobWindowWidth() = org.scalajs.dom.document.body.offsetWidth.toInt
+
   @SuppressWarnings(Array(Public))
   def jobCanvas(timers: JsTimers, autowire: MockableAutowire)(implicit ec: ExecutionContext) = {
     ScalaComponent.builder[Unit]("Timer")
-      .initialState(State(ResultAndTime(CachedResult(None), Instant.now), drawingAreaDuration = 1.days,
+      .initialState(State(queryJobWindowWidth(), ResultAndTime(CachedResult(None), Instant.now), drawingAreaDuration = 1.days,
         Instant.now(), mouseDownY = None, endTimeAtMouseDown = Instant.now, followTime = true))
       .backend(new JobCanvas(_, timers, autowire))
       .renderS(_.backend.render(_))
       .componentDidMount(_.backend.start)
       .componentWillUnmount(_.backend.clear)
+      .configure(
+        EventListener.install("resize", _.backend.resized, _ => org.scalajs.dom.window)
+      )
       .build
   }
 
