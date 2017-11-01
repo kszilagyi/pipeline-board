@@ -191,6 +191,7 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
             s.copy(followTime = follow, endTime = endTime)
           }
         ),
+        html_<^.<.p(s"Period: ${s.drawingAreaDuration}"),
         html_<^.<.label(html_<^.^.`for` := checkboxId, "Follow"),
         <.svg(
           svgParams: _*

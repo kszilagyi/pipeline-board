@@ -43,7 +43,7 @@ object MyStyles extends StyleSheet.Inline {
 
   val unstable = style(svgFill := pink)
 
-  val labelEndPx = 300
+  val labelEndPx = 200
   val rightMargin = 100
 
   val topLevelSvg = style(

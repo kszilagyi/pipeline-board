@@ -78,7 +78,7 @@ object RenderUtils extends LazyLogging {
           ^.x := x,
           ^.y := yEnd + 10,
           ^.textAnchor := "middle",
-          timeOnBar.format(DateTimeFormatter.ofPattern("uuuu-MMM-dd HH:mm:ss"))
+          timeOnBar.format(DateTimeFormatter.ofPattern("uuuu-MMM-dd HH:mm"))
         )
       )
     }
