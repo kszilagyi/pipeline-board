@@ -1,5 +1,6 @@
 package com.kristofszilagyi.controllers
 
+import java.net.URLEncoder
 import javax.inject._
 
 import com.kristofszilagyi.Aggregator
@@ -8,6 +9,7 @@ import com.kristofszilagyi.fetchers.{GitLabCiFetcher, GitLabCiJob, JenkinsFetche
 import com.kristofszilagyi.shared.CssSettings.settings._
 import com.kristofszilagyi.shared.JobType.{GitLabCi, Jenkins}
 import com.kristofszilagyi.shared._
+import com.netaporter.uri.{PathPart, Uri}
 import net.jcazevedo.moultingyaml.PimpedString
 import play.api.Configuration
 import play.api.libs.ws.WSClient
@@ -33,7 +35,7 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
   }
 
 
-  @SuppressWarnings(Array(Wart.Throw))
+  @SuppressWarnings(Array(Wart.OptionPartial))
   private val autowireServer = {
     //todo fix for other OS
     //todo rename with project rename
@@ -44,12 +46,15 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
     val jenkinsJobs = config.jenkins.jobs.map(jobConfig =>
       Job(jobConfig.name, Urls(userRoot = jobConfig.url,restRoot = RestRoot(jobConfig.url.u / "api/json")), Jenkins)
     )
-    val gitLabJobs = config.gitLabCi.jobs.map(jobConfig =>
+    val gitLabJobs = config.gitLabCi.jobs.map { jobConfig =>
+      val root = jobConfig.root
+      val jobPath = URLEncoder.encode(root.u.u.pathParts.map(_.part).mkString("/"), "utf-8")
+      val restRoot = root.u.u.copy(pathParts = Seq(PathPart("api"), PathPart("v4"), PathPart("projects")) :+ PathPart(jobPath)) //todo url encode
       GitLabCiJob(
-        Job(jobConfig.name, Urls(userRoot = jobConfig.userUrl, restRoot = jobConfig.restRoot), GitLabCi),
+        Job(jobConfig.name, Urls(userRoot = root, restRoot = RestRoot(RawUrl(restRoot))), GitLabCi),
         jobConfig.accessToken, jobConfig.jobNameOnGitLab
       )
-    )
+    }
     val aggregator = new Aggregator(Seq(
       new JenkinsFetcher(wsClient, jenkinsJobs),
       new GitLabCiFetcher(wsClient, gitLabJobs)

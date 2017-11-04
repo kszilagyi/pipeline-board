@@ -43,9 +43,9 @@ object GitLabCiAccessToken {
 final case class GitLabCiAccessToken(s: String)
 
 object GitLabCiJobConfig {
-  implicit val format: YamlFormat[GitLabCiJobConfig] = yamlFormat5(GitLabCiJobConfig.apply)
+  implicit val format: YamlFormat[GitLabCiJobConfig] = yamlFormat4(GitLabCiJobConfig.apply)
 }
-final case class GitLabCiJobConfig(name: JobDisplayName, userUrl: UserRoot, restRoot: RestRoot,
+final case class GitLabCiJobConfig(name: JobDisplayName, root: UserRoot,
                                    accessToken: Option[GitLabCiAccessToken], jobNameOnGitLab: JobNameOnGitLab)
 
 object GitLabCiConfig {

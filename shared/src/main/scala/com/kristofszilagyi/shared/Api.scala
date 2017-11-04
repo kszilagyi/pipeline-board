@@ -54,6 +54,7 @@ object UriEncoders {
 sealed trait JobType extends EnumEntry {
   def jobInfo(urls: Urls): RawUrl
   def buildInfo(urls: Urls, n: BuildNumber): RawUrl
+  def buildUi(urls: Urls, n: BuildNumber): RawUrl
 }
 
 object JobType extends Enum[JobType] with CirceEnum[JobType] {
@@ -62,6 +63,10 @@ object JobType extends Enum[JobType] with CirceEnum[JobType] {
     def jobInfo(urls: Urls): RawUrl = {
       urls.restRoot.u / "jobs" ? ("per_page" -> 100)
     }
+
+    def buildUi(urls: Urls, n: BuildNumber): RawUrl = {
+      urls.userRoot.u / "-/jobs" / n.i.toString
+    }
   }
   case object Jenkins extends JobType {
     def buildInfo(urls: Urls, n: BuildNumber): RawUrl = {
@@ -69,6 +74,8 @@ object JobType extends Enum[JobType] with CirceEnum[JobType] {
     }
 
     def jobInfo(urls: Urls): RawUrl = urls.restRoot.u
+
+    def buildUi(urls: Urls, n: BuildNumber): RawUrl = urls.userRoot.u / n.i.toString
   }
 
   def values: immutable.IndexedSeq[JobType] = findValues
@@ -86,6 +93,7 @@ object JobType extends Enum[JobType] with CirceEnum[JobType] {
 @JsonCodec final case class Job(name: JobDisplayName, urls: Urls, tpe: JobType) {
   def buildInfo(n: BuildNumber): RawUrl = tpe.buildInfo(urls, n) //todo this is not implemented on git lab ci, refactor
   def jobInfo: RawUrl = tpe.jobInfo(urls)
+  def buildUi(n: BuildNumber): RawUrl = tpe.buildUi(urls, n)
 }
 
 @JsonCodec final case class JobDetails(request: Job, r: Either[ResponseError, Seq[scala.Either[ResponseError, BuildInfo]]])
