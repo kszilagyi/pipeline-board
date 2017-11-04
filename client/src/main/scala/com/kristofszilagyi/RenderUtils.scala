@@ -111,9 +111,9 @@ object RenderUtils extends LazyLogging {
         ))
       case Right(runs) =>
         runs.flatMap(either => either match {
-          case Right(run) =>
-            val startRelativeToDrawingAreaBeginning = (run.buildStart - jobArea.startTime).max(0.seconds)
-            val endRelativeToDrawingAreaBeginning = run.maybeBuildFinish match {
+          case Right(build) =>
+            val startRelativeToDrawingAreaBeginning = (build.buildStart - jobArea.startTime).max(0.seconds)
+            val endRelativeToDrawingAreaBeginning = build.maybeBuildFinish match {
               case Some(buildFinish) => (buildFinish - jobArea.startTime).min(jobArea.length)
               case None => jobArea.length
             }
@@ -130,17 +130,17 @@ object RenderUtils extends LazyLogging {
               val widthPx = Math.max(4, relativeWidthRatio * jobArea.widthPx) //todo display these nicely, probably not really a problem
               //todo header, colors, hovering, zooming, horizontal lines, click
 
-              val style: List[TagMod] = run.buildStatus match {
-                case Created => List(MyStyles.created)
-                case Pending => List(MyStyles.pending)
-                case Building => List(MyStyles.building)
-                case Failed => List(MyStyles.failed)
-                case Successful => List(MyStyles.success)
-                case Aborted => List(MyStyles.aborted)
-                case Unstable => List(MyStyles.unstable)
-              }
+              val style: List[TagMod] = List(MyStyles.rectange, build.buildStatus match {
+                case Created => MyStyles.created
+                case Pending => MyStyles.pending
+                case Building => MyStyles.building
+                case Failed => MyStyles.failed
+                case Successful => MyStyles.success
+                case Aborted => MyStyles.aborted
+                case Unstable => MyStyles.unstable
+              })
 
-              val finishString = run.maybeBuildFinish.map(time => s"Finish: $time\n").getOrElse("")
+              val finishString = build.maybeBuildFinish.map(time => s"Finish: $time\n").getOrElse("")
               val nonStyle = List(
                 ^.x := startPx.toInt,
                 ^.y := (stripHeight - rectangleHeight) / 2,
@@ -149,9 +149,14 @@ object RenderUtils extends LazyLogging {
                 className := s"build_rect",
                 //todo add length
                 //todo replace this with jQuery or sg similar and make it pop up immediately not after delay and not browser dependent way
-                <.title(s"Id: ${run.buildNumber.i}\nStart: ${run.buildStart}\n${finishString}Status: ${run.buildStatus}")
+                <.title(s"Id: ${build.buildNumber.i}\nStart: ${build.buildStart}\n${finishString}Status: ${build.buildStatus}")
               )
-              Some(<.rect(nonStyle ++ style: _*))
+              Some(
+                a(href := jobState.request.buildUi(build.buildNumber).u.toString(),
+                  target := "_blank",
+                  <.rect(nonStyle ++ style: _*)
+                )
+              )
             } else
               None
             buildRectangle.toList

@@ -19,7 +19,11 @@ object MyStyles extends StyleSheet.Inline {
     (100 %%) -> keyframe(visibility.visible),
   )
 
-  //^.style := (animation := "blinker 2s linear infinite")*/
+  val rectange = style{
+    &.hover(
+      opacity(0.7)
+    )
+  }
 
   val created = style(svgFill := yellow)
 
