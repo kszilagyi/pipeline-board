@@ -87,9 +87,8 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
   def start: Callback = Callback {
     interval = Some(timers.setInterval(30.seconds, {
       tick.runNow()
-    }))
-    tick.runNow()
-  }
+    })) } >> tick >> resized
+
 
   def clear: Callback = Callback {
     interval foreach js.timers.clearInterval
@@ -97,9 +96,8 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
   }
 
   def resized: Callback = {
-    $.modState(s => s.copy(windowWidthPx = Math.max(queryJobWindowWidth(), (labelEndPx + rightMargin + 100))))
+    $.modState(s => s.copy(windowWidthPx = Math.max(queryJobWindowWidth(), labelEndPx + rightMargin + 100)))
   }
-
 
   def render(s: State): TagOf[HTMLElement] = {
     val windowWidthPx = s.windowWidthPx
@@ -232,7 +230,9 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
 // which signal minutes, hours, days, weeks. months
 object Canvas {
 
-  def queryJobWindowWidth() = org.scalajs.dom.document.body.offsetWidth.toInt
+  def queryJobWindowWidth(): Int = {
+    org.scalajs.dom.document.body.clientWidth
+  }
 
   @SuppressWarnings(Array(Public))
   def jobCanvas(timers: JsTimers, autowire: MockableAutowire)(implicit ec: ExecutionContext) = {
