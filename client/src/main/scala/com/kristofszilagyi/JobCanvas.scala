@@ -97,7 +97,7 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
   def render(s: State): TagOf[HTMLElement] = {
     val windowWidthPx = s.windowWidthPx
     val jobAreaWidthPx = windowWidthPx - labelEndPx - rightMargin
-    val space = 20
+    val space = 30
     val first = 50
     val spaceContentRatio = 0.75
     import s.drawingAreaDuration
@@ -112,10 +112,14 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
       //todo handle if data is stale
 
       val jobArea = JobArea(jobAreaWidthPx, s.endTime, drawingAreaDuration)
+      val topOfVerticalLinesYPx = backgroundBaseLine(0)
+      val bottomOfVerticalLinesYPx = backgroundBaseLine(0) + ciState.results.size * space + 10
+      val timestampTextYPx = bottomOfVerticalLinesYPx + 10
+
       val verticleLines = moveTo(
         x = labelEndPx,
-        elements = verticalLines(backgroundBaseLine = backgroundBaseLine, numberOfJobs = ciState.results.size,
-          jobHeight = space, jobArea, timeZone = ZoneId.systemDefault())
+        elements = verticalLines(topOfVerticalLinesYPx = topOfVerticalLinesYPx, bottomOfVerticalLinesYPx = bottomOfVerticalLinesYPx,
+          timestampTextYPx = timestampTextYPx, jobArea, timeZone = ZoneId.systemDefault())
       )
       //todo show warning if some of the queries failed
       val labels = ciState.results.zipWithIndex.map { case (jobState, idx) =>
@@ -171,7 +175,7 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
       )
 
       val groupedDrawObjs = <.g((drawObjs ++ dragListeners) :+ wheelListener: _*)
-      val svgParams = labels ++ List(groupedDrawObjs, verticleLines, className := MyStyles.topLevelSvg.htmlClass, ^.width := windowWidthPx)
+      val svgParams = labels ++ List(groupedDrawObjs, verticleLines, ^.width := windowWidthPx, ^.height := timestampTextYPx)
       val checkboxId = "follow"
       html_<^.<.div(
         html_<^.< input(

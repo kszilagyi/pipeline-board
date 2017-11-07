@@ -57,13 +57,13 @@ object RenderUtils extends LazyLogging {
     moveTo(x, y, List(elements))
   }
 
-  def verticalLines(backgroundBaseLine: Int => Int, numberOfJobs: Int, jobHeight: Int,
+  def verticalLines(topOfVerticalLinesYPx: Int, bottomOfVerticalLinesYPx: Int, timestampTextYPx: Int,
                     jobArea: JobArea, timeZone: ZoneId): immutable.Seq[TagOf[SVGElement]] = {
     val maxHorizontalBar = 5
     (0 to maxHorizontalBar) flatMap { idx =>
       val x = jobArea.widthPx / maxHorizontalBar * idx
-      val yStart = backgroundBaseLine(0)
-      val yEnd = backgroundBaseLine(0) + numberOfJobs * jobHeight + 10
+      val yStart = topOfVerticalLinesYPx
+      val yEnd = bottomOfVerticalLinesYPx
       val timeOnBar = jobArea.endTime.atZone(timeZone) - jobArea.drawingAreaDuration + idx.toDouble / maxHorizontalBar * jobArea.drawingAreaDuration
       List(
         <.line(
@@ -76,7 +76,7 @@ object RenderUtils extends LazyLogging {
         ),
         <.text(
           ^.x := x,
-          ^.y := yEnd + 10,
+          ^.y := timestampTextYPx,
           ^.textAnchor := "middle",
           timeOnBar.format(DateTimeFormatter.ofPattern("uuuu-MMM-dd HH:mm"))
         )

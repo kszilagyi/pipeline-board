@@ -49,8 +49,4 @@ object MyStyles extends StyleSheet.Inline {
 
   val labelEndPx = 200
   val rightMargin = 100
-
-  val topLevelSvg = style(
-    height(1000.px)
-  )
 }
