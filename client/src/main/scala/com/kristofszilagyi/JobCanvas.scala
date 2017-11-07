@@ -2,27 +2,27 @@ package com.kristofszilagyi
 
 import java.time.{Instant, ZoneId}
 
+import com.kristofszilagyi.Canvas.queryJobWindowWidth
 import com.kristofszilagyi.RenderUtils._
 import com.kristofszilagyi.shared.InstantOps._
+import com.kristofszilagyi.shared.MyStyles.{labelEndPx, rightMargin}
+import com.kristofszilagyi.shared.TypeSafeEqualsOps._
 import com.kristofszilagyi.shared.Wart._
 import com.kristofszilagyi.shared._
+import japgolly.scalajs.react.extra.{EventListener, OnUnmount}
 import japgolly.scalajs.react.raw.{SyntheticMouseEvent, SyntheticWheelEvent}
 import japgolly.scalajs.react.vdom._
 import japgolly.scalajs.react.vdom.svg_<^.{<, _}
 import japgolly.scalajs.react.{BackendScope, Callback, CallbackTo, ScalaComponent}
 import org.scalajs.dom.raw.{HTMLElement, SVGElement}
 import slogging.LazyLogging
-import TypeSafeEqualsOps._
-import com.kristofszilagyi.Canvas.queryJobWindowWidth
-import com.kristofszilagyi.shared.MyStyles.{labelEndPx, rightMargin}
-import japgolly.scalajs.react.extra.{EventListener, OnUnmount}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration.Infinite
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.scalajs.js
 
-final case class State(windowWidthPx: Int, ciState: ResultAndTime, drawingAreaDuration: FiniteDuration,
+final case class State(windowWidthPx: Int, ciState: ResultAndTime, drawingAreaDuration: FiniteDuration, durationIdx: Int,
                        endTime: Instant, mouseDownY: Option[Int], endTimeAtMouseDown: Instant, followTime: Boolean)
 
 final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireApi: MockableAutowire)
@@ -47,19 +47,14 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
   }
 
   def adjustZoomLevel(delta: Double): CallbackTo[Unit] = {
+    val validDurations = List(1.hour, 2.hours, 5.hours, 12.hours, 24.hours, 2.days, 5.days, 7.days, 14.days, 30.days, 60.days, 180.days, 365.days).sorted
     $.modState(s => {
-      val to10Percent = 1 + Math.abs(delta) / 530
-      val signedTo10Percent = if (delta > 0) {
-        to10Percent
-      } else {
-        1 / to10Percent
-      }
-      val maxDuration = 365.days
-      val newDuration = s.drawingAreaDuration * signedTo10Percent match {
-        case _: Infinite => maxDuration
-        case f: FiniteDuration => f
-      }
-      s.copy(drawingAreaDuration = 1.hour.max(newDuration).min(maxDuration))
+      val idx = s.durationIdx
+      val dir = math.signum(delta.toInt)
+
+      val newIdx = (idx + dir).min(validDurations.length - 1).max(0)
+      val newDuration = validDurations(newIdx)
+      s.copy(drawingAreaDuration = newDuration, durationIdx = newIdx)
     })
   }
 
@@ -102,7 +97,7 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
   def render(s: State): TagOf[HTMLElement] = {
     val windowWidthPx = s.windowWidthPx
     val jobAreaWidthPx = windowWidthPx - labelEndPx - rightMargin
-    val space = 50
+    val space = 20
     val first = 50
     val spaceContentRatio = 0.75
     import s.drawingAreaDuration
@@ -237,7 +232,7 @@ object Canvas {
   @SuppressWarnings(Array(Public))
   def jobCanvas(timers: JsTimers, autowire: MockableAutowire)(implicit ec: ExecutionContext) = {
     ScalaComponent.builder[Unit]("Timer")
-      .initialState(State(queryJobWindowWidth(), ResultAndTime(CachedResult(None), Instant.now), drawingAreaDuration = 1.days,
+      .initialState(State(queryJobWindowWidth(), ResultAndTime(CachedResult(None), Instant.now), drawingAreaDuration = 1.days, 5,
         Instant.now(), mouseDownY = None, endTimeAtMouseDown = Instant.now, followTime = true))
       .backend(new JobCanvas(_, timers, autowire))
       .renderS(_.backend.render(_))
