@@ -22,6 +22,7 @@ import scalacss.ScalaCssReact._
 object RenderUtils extends LazyLogging {
 
   def alignmentBaseline: VdomAttr[Any] = VdomAttr("alignmentBaseline")
+  def dominantBaseline: VdomAttr[Any] = VdomAttr("dominantBaseline")
 
   def className: VdomAttr[Any] = VdomAttr("className")
 
@@ -36,6 +37,9 @@ object RenderUtils extends LazyLogging {
   def animation = VdomAttr("animation")
 
   val textAnchorEnd = "end"
+
+  val alignmentBaselineMiddle = "middle"
+  val dominantBaselineCentral = "central"
 
   final case class JobArea(widthPx: Int, endTime: Instant, drawingAreaDuration: FiniteDuration) {
     def startTime: Instant = endTime - drawingAreaDuration
@@ -107,7 +111,7 @@ object RenderUtils extends LazyLogging {
       case Left(err) =>
         List(<.text(
           ^.fill := "red",
-          alignmentBaseline := "middle",
+          alignmentBaseline := alignmentBaselineMiddle,
           ^.y := stripHeight/2,
           err.s
         ))

@@ -97,14 +97,12 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
     val windowWidthPx = s.windowWidthPx
     val jobAreaWidthPx = windowWidthPx - labelEndPx - rightMargin
     val space = 30
-    val first = 50
-    val spaceContentRatio = 0.75
     val generalMargin = 10
     import s.drawingAreaDuration
 
-    def textBaseLine(idx: Int): Int = idx * space + first
+    def textMiddleLine(idx: Int): Int = (backgroundBaseLine(idx) + backgroundBaseLine(idx + 1)) / 2
 
-    def backgroundBaseLine(idx: Int): Int = (textBaseLine(idx) - space * spaceContentRatio).toInt
+    def backgroundBaseLine(idx: Int): Int = idx * space
     val colors = List("black", "darkslategrey")
 
     s.ciState.cachedResult.maybe.map { ciState =>
@@ -131,8 +129,9 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
 
         <.text(
           ^.x := labelEndPx - generalMargin/2,
-          ^.y := textBaseLine(idx),
+          ^.y := textMiddleLine(idx),
           ^.textAnchor := textAnchorEnd,
+          dominantBaseline := dominantBaselineCentral,
           <.tspan(
             ^.fill := "red",
             <.title(s"$numberOfErrors build was not shown due to errors. Please check out the JavaScript console for details."),
@@ -177,7 +176,7 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
       )
 
       val groupedDrawObjs = <.g((drawObjs ++ dragListeners) :+ wheelListener: _*)
-      val svgParams = labels ++ List(groupedDrawObjs, verticleLines, ^.width := windowWidthPx, ^.height := timestampTextYPx, periodText)
+      val svgParams = List(moveTo(y = 50, elements = List(groupedDrawObjs, verticleLines, periodText) ++ labels), ^.width := windowWidthPx, ^.height := timestampTextYPx)
       val checkboxId = "follow"
       html_<^.<.div(
         html_<^.< input(
