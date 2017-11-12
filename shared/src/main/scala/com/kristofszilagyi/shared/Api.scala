@@ -88,6 +88,8 @@ object JobType extends Enum[JobType] with CirceEnum[JobType] {
   def /(s: String): RawUrl = RawUrl(u / s)
 
   def rawString: String = u.toStringRaw
+
+  override def toString: String = rawString
 }
 
 @JsonCodec final case class Job(name: JobDisplayName, urls: Urls, tpe: JobType) {
