@@ -16,7 +16,6 @@ import japgolly.scalajs.react.vdom.svg_<^.{<, _}
 import japgolly.scalajs.react.{BackendScope, Callback, CallbackTo, ScalaComponent}
 import org.scalajs.dom.raw.{HTMLElement, SVGElement}
 import slogging.LazyLogging
-
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration.Infinite
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
@@ -100,6 +99,7 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
     val space = 30
     val first = 50
     val spaceContentRatio = 0.75
+    val generalMargin = 10
     import s.drawingAreaDuration
 
     def textBaseLine(idx: Int): Int = idx * space + first
@@ -113,8 +113,8 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
 
       val jobArea = JobArea(jobAreaWidthPx, s.endTime, drawingAreaDuration)
       val topOfVerticalLinesYPx = backgroundBaseLine(0)
-      val bottomOfVerticalLinesYPx = backgroundBaseLine(0) + ciState.results.size * space + 10
-      val timestampTextYPx = bottomOfVerticalLinesYPx + 10
+      val bottomOfVerticalLinesYPx = backgroundBaseLine(0) + ciState.results.size * space + generalMargin
+      val timestampTextYPx = bottomOfVerticalLinesYPx + generalMargin
 
       val verticleLines = moveTo(
         x = labelEndPx,
@@ -130,9 +130,9 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
 
 
         <.text(
-          ^.x := labelEndPx,
+          ^.x := labelEndPx - generalMargin/2,
           ^.y := textBaseLine(idx),
-          ^.textAnchor := "end",
+          ^.textAnchor := textAnchorEnd,
           <.tspan(
             ^.fill := "red",
             <.title(s"$numberOfErrors build was not shown due to errors. Please check out the JavaScript console for details."),
@@ -168,6 +168,8 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
         )
         oneStrip
       }
+      val periodText = <.text(^.x := labelEndPx + jobAreaWidthPx, ^.y := backgroundBaseLine(0) - generalMargin,
+        s"Showing: ${s.drawingAreaDuration}", ^.textAnchor := textAnchorEnd)
       val wheelListener = html_<^.^.onWheel ==> handleWheel
       val dragListeners = List(html_<^.^.onMouseDown ==> handleDown,
         html_<^.^.onMouseMove ==> handleMove,
@@ -175,7 +177,7 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
       )
 
       val groupedDrawObjs = <.g((drawObjs ++ dragListeners) :+ wheelListener: _*)
-      val svgParams = labels ++ List(groupedDrawObjs, verticleLines, ^.width := windowWidthPx, ^.height := timestampTextYPx)
+      val svgParams = labels ++ List(groupedDrawObjs, verticleLines, ^.width := windowWidthPx, ^.height := timestampTextYPx, periodText)
       val checkboxId = "follow"
       html_<^.<.div(
         html_<^.< input(
@@ -188,7 +190,6 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
             s.copy(followTime = follow, endTime = endTime)
           }
         ),
-        html_<^.<.p(s"Period: ${s.drawingAreaDuration}"),
         html_<^.<.label(html_<^.^.`for` := checkboxId, "Follow"),
         <.svg(
           svgParams: _*

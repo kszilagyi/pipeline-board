@@ -35,6 +35,8 @@ object RenderUtils extends LazyLogging {
 
   def animation = VdomAttr("animation")
 
+  val textAnchorEnd = "end"
+
   final case class JobArea(widthPx: Int, endTime: Instant, drawingAreaDuration: FiniteDuration) {
     def startTime: Instant = endTime - drawingAreaDuration
     def length: FiniteDuration = endTime - startTime
@@ -61,7 +63,7 @@ object RenderUtils extends LazyLogging {
                     jobArea: JobArea, timeZone: ZoneId): immutable.Seq[TagOf[SVGElement]] = {
     val maxHorizontalBar = 5
     (0 to maxHorizontalBar) flatMap { idx =>
-      val x = jobArea.widthPx / maxHorizontalBar * idx
+      val x = (jobArea.widthPx.toDouble / maxHorizontalBar * idx).toInt
       val yStart = topOfVerticalLinesYPx
       val yEnd = bottomOfVerticalLinesYPx
       val timeOnBar = jobArea.endTime.atZone(timeZone) - jobArea.drawingAreaDuration + idx.toDouble / maxHorizontalBar * jobArea.drawingAreaDuration
