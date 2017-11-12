@@ -167,7 +167,7 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
         )
         oneStrip
       }
-      val periodText = <.text(^.x := labelEndPx + jobAreaWidthPx, ^.y := backgroundBaseLine(0) - generalMargin,
+      val periodText = <.text(^.x := labelEndPx + jobAreaWidthPx, ^.y := - generalMargin,
         s"Showing: ${s.drawingAreaDuration}", ^.textAnchor := textAnchorEnd)
       val wheelListener = html_<^.^.onWheel ==> handleWheel
       val dragListeners = List(html_<^.^.onMouseDown ==> handleDown,
