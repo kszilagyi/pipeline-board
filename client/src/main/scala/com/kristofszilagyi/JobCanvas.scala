@@ -14,8 +14,10 @@ import japgolly.scalajs.react.raw.{SyntheticMouseEvent, SyntheticWheelEvent}
 import japgolly.scalajs.react.vdom._
 import japgolly.scalajs.react.vdom.svg_<^.{<, _}
 import japgolly.scalajs.react.{BackendScope, Callback, CallbackTo, ScalaComponent}
-import org.scalajs.dom.raw.{HTMLElement, SVGElement}
+import org.scalajs.dom.Element
+import org.scalajs.dom.raw.SVGElement
 import slogging.LazyLogging
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration.Infinite
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
@@ -93,7 +95,7 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
     $.modState(s => s.copy(windowWidthPx = Math.max(queryJobWindowWidth(), labelEndPx + rightMargin + 100)))
   }
 
-  def render(s: State): TagOf[HTMLElement] = {
+  def render(s: State): TagOf[Element] = {
     val windowWidthPx = s.windowWidthPx
     val jobAreaWidthPx = windowWidthPx - labelEndPx - rightMargin
     val space = 30
@@ -167,8 +169,8 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
         )
         oneStrip
       }
-      val periodText = <.text(^.x := labelEndPx + jobAreaWidthPx, ^.y := - generalMargin,
-        s"Showing: ${s.drawingAreaDuration}", ^.textAnchor := textAnchorEnd)
+      val periodText = <.text(^.x := labelEndPx + jobAreaWidthPx, ^.y := backgroundBaseLine(-1),
+        s"Showing: ${s.drawingAreaDuration}", ^.textAnchor := textAnchorEnd, dominantBaseline := "text-before-edge")
       val wheelListener = html_<^.^.onWheel ==> handleWheel
       val dragListeners = List(html_<^.^.onMouseDown ==> handleDown,
         html_<^.^.onMouseMove ==> handleMove,
@@ -176,23 +178,33 @@ final class JobCanvas($: BackendScope[Unit, State], timers: JsTimers, autowireAp
       )
 
       val groupedDrawObjs = <.g((drawObjs ++ dragListeners) :+ wheelListener: _*)
-      val svgParams = List(moveTo(y = 50, elements = List(groupedDrawObjs, verticleLines, periodText) ++ labels), ^.width := windowWidthPx, ^.height := timestampTextYPx)
       val checkboxId = "follow"
-      html_<^.<.div(
-        html_<^.< input(
-          html_<^.^.id := checkboxId,
-          html_<^.^.`type` := "checkbox",
-          html_<^.^.checked := s.followTime,
-          html_<^.^.onChange --> $.modState { s =>
-            val follow = !s.followTime
-            val endTime = if (follow) Instant.now else s.endTime
-            s.copy(followTime = follow, endTime = endTime)
-          }
-        ),
-        html_<^.<.label(html_<^.^.`for` := checkboxId, "Follow"),
-        <.svg(
-          svgParams: _*
+      val input = <.foreignObject(
+        ^.x := labelEndPx,
+        ^.y := backgroundBaseLine(-1),
+        ^.width := 100, //single line
+        //todo replace this with SVG checkbox, this is quite hard to align
+        html_<^.<div(
+          html_<^.< input(
+            html_<^.^.id := checkboxId,
+            html_<^.^.`type` := "checkbox",
+            html_<^.^.checked := s.followTime,
+            html_<^.^.onChange --> $.modState { s =>
+              val follow = !s.followTime
+              val endTime = if (follow) Instant.now else s.endTime
+              s.copy(followTime = follow, endTime = endTime)
+            }
+          ),
+          html_<^.<.label(html_<^.^.`for` := checkboxId, "Follow")
         )
+      )
+      val svgParams = List(
+        moveTo(y = 50, elements = List(groupedDrawObjs, verticleLines, periodText) ++ labels :+ input),
+        ^.width := windowWidthPx, ^.height := timestampTextYPx
+      )
+
+      <.svg(
+        svgParams: _*
       )
     }.getOrElse(html_<^.<.p("No data yet"))
   }
