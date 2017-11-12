@@ -203,9 +203,10 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
           html_<^.<.label(html_<^.^.`for` := checkboxId, "Follow")
         )
       )
+      val offsetOnPageY = 50
       val svgParams = List(
-        moveTo(y = 50, elements = List(groupedDrawObjs, verticleLines, periodText) ++ labels :+ input),
-        ^.width := windowWidthPx, ^.height := timestampTextYPx
+        moveTo(y = offsetOnPageY, elements = List(groupedDrawObjs, verticleLines, periodText) ++ labels :+ input),
+        ^.width := windowWidthPx, ^.height := timestampTextYPx + offsetOnPageY
       )
 
       <.svg(

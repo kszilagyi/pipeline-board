@@ -56,8 +56,8 @@ final class GitLabCiFetcher(ws: WSClient,
     msg match {
       case Fetch(replyTo) =>
         val results = jobsToFetch.map { job =>
-          val allbuildsForProjectFut = job.authenticatedRestRequest(ws).get.map(safeRead[PartialJobsInfo](job.jobInfo, _))
-          val buildsWithRightNameFut = allbuildsForProjectFut.map{ allBuildsForProject =>
+          val allBuildsForProjectFut = job.authenticatedRestRequest(ws).get.map(safeRead[PartialJobsInfo](job.jobInfo, _))
+          val buildsWithRightNameFut = allBuildsForProjectFut.map{ allBuildsForProject =>
             allBuildsForProject.map(_.filter(_.name ==== job.jobNameOnGitLab.s))
           }
           val buildsFut = buildsWithRightNameFut.map{ buildsWithRightName =>
