@@ -77,7 +77,7 @@ object GitLabCiFetcher {
     val maybeSequencedLinks: Either[ResponseError, List[RawLink]] = links.toList.sequenceU //type annotation to make intellj faster
     val checkedLinks: Either[ResponseError, List[Link]] = maybeSequencedLinks.map { ls =>
       val maybeLinks: Either[ResponseError, List[Link]] = ls.map { link =>
-        Uri.safeParse(link.link) match {
+        Uri.safeParse(link.link.drop(1).dropRight(1)) match { //first and last character is < and >
           case Left(notAUri) => Left(ResponseError(notAUri.s))
           case Right(uri) => Right(Link(link.rel, RawUrl(uri)))
         }
