@@ -206,7 +206,7 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
       val offsetOnPageY = 50
       val svgParams = List(
         moveTo(y = offsetOnPageY, elements = List(groupedDrawObjs, verticleLines, periodText) ++ labels :+ input),
-        ^.width := windowWidthPx, ^.height := timestampTextYPx + offsetOnPageY
+        ^.width := windowWidthPx, ^.height := timestampTextYPx + offsetOnPageY + 10 //+10 to let the bottom of the text in
       )
 
       <.svg(
