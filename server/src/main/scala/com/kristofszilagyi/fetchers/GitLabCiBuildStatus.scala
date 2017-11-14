@@ -31,7 +31,7 @@ object GitLabCiBuildStatus extends Enum[GitLabCiBuildStatus] with TolerantCirceE
   case object Success extends DisplayableGitLabCiStatus {
     def toBuildStatus: BuildStatus = BuildStatus.Successful
   }
-  case object Cancelled extends DisplayableGitLabCiStatus {
+  case object Canceled extends DisplayableGitLabCiStatus {
     def toBuildStatus: BuildStatus = BuildStatus.Aborted
   }
   case object Skipped extends GitLabCiBuildStatus
