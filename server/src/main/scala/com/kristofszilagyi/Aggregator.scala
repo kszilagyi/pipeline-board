@@ -27,7 +27,8 @@ class Aggregator(fetchers: Seq[Fetcher]) {
         ctx.watch(ref)
         ref
       }
-      implicit val timeout: Timeout = Timeout(10.seconds)
+      //todo change this to be without timeout and ask
+      implicit val timeout: Timeout = Timeout(30.seconds)
       implicit val scheduler: Scheduler = ctx.system.scheduler
       implicit val ec: ExecutionContext = ctx.executionContext
 
