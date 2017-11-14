@@ -47,7 +47,7 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
       Job(jobConfig.name, Urls(userRoot = jobConfig.url,restRoot = RestRoot(jobConfig.url.u / "api/json")), Jenkins)
     )
     val gitLabJobs = config.gitLabCi.jobs.map { jobConfig =>
-      val root = jobConfig.root
+      val root = jobConfig.url
       val jobPath = URLEncoder.encode(root.u.u.pathParts.map(_.part).mkString("/"), "utf-8")
       val restRoot = root.u.u.copy(pathParts = Seq(PathPart("api"), PathPart("v4"), PathPart("projects")) :+ PathPart(jobPath)) //todo url encode
       GitLabCiJob(
