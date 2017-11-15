@@ -1,4 +1,4 @@
-package com.kristofszilagyi.cache
+package com.kristofszilagyi.actors
 
 import akka.typed.scaladsl.Actor
 import akka.typed.{ActorRef, Behavior}

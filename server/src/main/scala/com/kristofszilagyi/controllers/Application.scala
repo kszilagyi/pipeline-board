@@ -3,7 +3,7 @@ package com.kristofszilagyi.controllers
 import java.net.URLEncoder
 import javax.inject._
 
-import com.kristofszilagyi.cache.ResultCache
+import com.kristofszilagyi.actors.ResultCache
 import com.kristofszilagyi.fetchers.{GitLabCiFetcher, GitLabCiJob, JenkinsFetcher}
 import com.kristofszilagyi.shared.CssSettings.settings._
 import com.kristofszilagyi.shared.JobType.{GitLabCi, Jenkins}

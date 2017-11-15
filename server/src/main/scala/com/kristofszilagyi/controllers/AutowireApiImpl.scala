@@ -6,7 +6,7 @@ import akka.actor.Scheduler
 import akka.typed.ActorSystem
 import akka.typed.scaladsl.AskPattern._
 import akka.util.Timeout
-import com.kristofszilagyi.cache.{FetchCached, ResultCache}
+import com.kristofszilagyi.actors.{FetchCached, ResultCache}
 import com.kristofszilagyi.shared.{AutowireApi, ResultAndTime}
 
 import scala.concurrent.duration.DurationInt
