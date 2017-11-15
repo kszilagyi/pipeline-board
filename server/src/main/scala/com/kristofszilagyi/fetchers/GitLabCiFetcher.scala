@@ -175,5 +175,8 @@ final class GitLabCiFetcher(ws: WSClient,
     }
   }
 
-  def name: String = "gitLabCi"
+  def name: String = {
+    val encodedName = Fetcher.encodeForActorName(jobToFetch.common.name.s)
+    s"gitLabCi-$encodedName"
+  }
 }
