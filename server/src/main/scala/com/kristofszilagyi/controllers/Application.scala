@@ -15,6 +15,7 @@ import play.api.libs.ws.WSClient
 import play.api.mvc._
 import com.netaporter.uri.dsl._
 import slogging.{LazyLogging, LoggerConfig, PrintLoggerFactory}
+import TypeSafeEqualsOps._
 
 import scala.collection.immutable.ListSet
 import scala.concurrent.ExecutionContext
@@ -58,6 +59,10 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
     val fetchers =
       jenkinsJobs.map(new JenkinsFetcher(wsClient, _)) ++ gitLabJobs.map(new GitLabCiFetcher(wsClient, _))
 
+    val jobs = jenkinsJobs ++ gitLabJobs.map(_.common)
+    val jobSet = ListSet(jobs: _*)
+    assert(jobs.size ==== jobSet.size, "Jobs are not unique")
+    assert(jobs.map(_.name).toSet.size ==== jobs.map(_.name).size, "Jobs names are not unique")
     val resultCache = new ResultCache(ListSet(jenkinsJobs ++ gitLabJobs.map(_.common): _*), fetchers)
     new AutowireServer(new AutowireApiImpl(resultCache))
   }
