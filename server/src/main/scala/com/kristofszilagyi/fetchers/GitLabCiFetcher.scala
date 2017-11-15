@@ -13,8 +13,8 @@ import slogging.{LazyLogging, Logger}
 import GitLabCiFetcher._
 import TypeSafeEqualsOps.AnyOps
 import cats.implicits._
+import com.kristofszilagyi.FetcherResult
 import com.kristofszilagyi.fetchers.JenkinsFetcher.Fetch
-import com.kristofszilagyi.utils.Utopia
 import com.kristofszilagyi.utils.Utopia.RichFuture
 import com.kristofszilagyi.utils.UriOps.RichUriObj
 
@@ -143,14 +143,14 @@ object GitLabCiFetcher {
 }
 //todo probably this should be a future....
 final class GitLabCiFetcher(ws: WSClient,
-                      jobsToFetch: Seq[GitLabCiJob])(implicit ec: ExecutionContext) extends LazyLogging with Fetcher {
+                            jobToFetch: GitLabCiJob)(implicit ec: ExecutionContext) extends LazyLogging with Fetcher {
   def behaviour: Actor.Immutable[Fetch] = Actor.immutable[Fetch] { (_, msg) =>
     msg match {
       case Fetch(replyTo) =>
-        val results = jobsToFetch.map { job =>
-          val last1000BuildsForProjectFut = queryLast1000Builds(logger, job, ws)
+        val result = {
+          val last1000BuildsForProjectFut = queryLast1000Builds(logger, jobToFetch, ws)
           val buildsWithRightNameFut = last1000BuildsForProjectFut.map{ last1000BuildsForProject =>
-            last1000BuildsForProject.map(_.filter(_.name ==== job.jobNameOnGitLab.s))
+            last1000BuildsForProject.map(_.filter(_.name ==== jobToFetch.jobNameOnGitLab.s))
           }
           val buildsFut = buildsWithRightNameFut.map{ buildsWithRightName =>
             buildsWithRightName.map(_.flatMap { build =>
@@ -163,11 +163,12 @@ final class GitLabCiFetcher(ws: WSClient,
             })
           }
           buildsFut.lift noThrowingMap {
-            case Failure(ex) => JobDetails(job.common, Left(ResponseError.failedToConnect(job.firstPage, ex)))
-            case Success(builds) => JobDetails(job.common, builds)
+            case Failure(ex) => JobDetails(jobToFetch.common,
+              Some(JobStatus(Left(ResponseError.failedToConnect(jobToFetch.firstPage, ex)), Instant.now())))
+            case Success(builds) => JobDetails(jobToFetch.common, Some(JobStatus(builds, Instant.now())))
           }
         }
-        Utopia.sequence(results).onComplete { result =>
+        result.onComplete { result =>
           replyTo ! FetcherResult(result)
         }
         Actor.same

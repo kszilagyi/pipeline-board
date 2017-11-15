@@ -98,12 +98,12 @@ object JobType extends Enum[JobType] with CirceEnum[JobType] {
   def buildUi(n: BuildNumber): RawUrl = tpe.buildUi(urls, n)
 }
 
-@JsonCodec final case class JobDetails(request: Job, r: Either[ResponseError, Seq[scala.Either[ResponseError, BuildInfo]]])
 
-@JsonCodec final case class FetcherResult(results: Seq[JobDetails])
+@JsonCodec final case class JobStatus(r: Either[ResponseError, Seq[scala.Either[ResponseError, BuildInfo]]], resultTime: Instant)
 
-@JsonCodec final case class AllResult(results: Seq[JobDetails], resultTime: Instant)
-@JsonCodec final case class CachedResult(maybe: Option[AllResult])
+@JsonCodec final case class JobDetails(static: Job, maybeDynamic: Option[JobStatus])
+
+@JsonCodec final case class CachedResult(results: Seq[JobDetails])
 
 @JsonCodec final case class ResultAndTime(cachedResult: CachedResult, time: Instant)
 

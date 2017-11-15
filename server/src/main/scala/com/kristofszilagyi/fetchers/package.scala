@@ -1,6 +1,6 @@
 package com.kristofszilagyi
 
-import com.kristofszilagyi.shared.{RawUrl, ResponseError, Wart}
+import com.kristofszilagyi.shared.{JobDetails, RawUrl, ResponseError, Wart}
 import io.circe.Decoder
 import play.api.libs.ws.WSResponse
 import com.kristofszilagyi.shared.TypeSafeEqualsOps._
@@ -16,3 +16,4 @@ package object fetchers {
 
 }
 
+final case class FetcherResult(results: JobDetails)

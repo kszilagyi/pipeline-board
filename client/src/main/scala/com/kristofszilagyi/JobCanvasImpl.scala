@@ -112,107 +112,108 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
     def backgroundBaseLine(idx: Int): Int = idx * space
     val colors = List("black", "darkslategrey")
 
-    s.ciState.cachedResult.maybe.map { ciState =>
-      //todo handle if jobs are not fecthed yet
-      //todo handle if data is stale
+    val ciState = s.ciState.cachedResult
+    //todo handle if jobs are not fecthed yet
+    //todo handle if data is stale
 
-      val jobArea = JobArea(jobAreaWidthPx, s.endTime, drawingAreaDuration)
-      val topOfVerticalLinesYPx = backgroundBaseLine(0)
-      val bottomOfVerticalLinesYPx = backgroundBaseLine(0) + ciState.results.size * space + generalMargin
-      val timestampTextYPx = bottomOfVerticalLinesYPx + generalMargin
+    val jobArea = JobArea(jobAreaWidthPx, s.endTime, drawingAreaDuration)
+    val topOfVerticalLinesYPx = backgroundBaseLine(0)
+    val bottomOfVerticalLinesYPx = backgroundBaseLine(0) + ciState.results.size * space + generalMargin
+    val timestampTextYPx = bottomOfVerticalLinesYPx + generalMargin
 
-      val verticleLines = moveTo(
-        x = labelEndPx,
-        elements = verticalLines(topOfVerticalLinesYPx = topOfVerticalLinesYPx, bottomOfVerticalLinesYPx = bottomOfVerticalLinesYPx,
-          timestampTextYPx = timestampTextYPx, jobArea, timeZone = ZoneId.systemDefault())
-      )
-      //todo show warning if some of the queries failed
-      val labels = ciState.results.zipWithIndex.map { case (jobState, idx) =>
-        val numberOfErrors = jobState.r.getOrElse(Seq.empty).map(_.isLeft).count(_ ==== true)
-        val warningMsg = if (numberOfErrors > 0) {
-          "\u26A0 "
-        } else ""
+    val verticleLines = moveTo(
+      x = labelEndPx,
+      elements = verticalLines(topOfVerticalLinesYPx = topOfVerticalLinesYPx, bottomOfVerticalLinesYPx = bottomOfVerticalLinesYPx,
+        timestampTextYPx = timestampTextYPx, jobArea, timeZone = ZoneId.systemDefault())
+    )
+    //todo show warning if some of the queries failed
+    val labels = ciState.results.zipWithIndex.map { case (jobState, idx) =>
+
+      val numberOfErrors = jobState.maybeDynamic.map(_.r.getOrElse(Seq.empty).map(_.isLeft).count(_ ==== true)).getOrElse(0)
+      val warningMsg = if (numberOfErrors > 0) {
+        "\u26A0 "
+      } else ""
 
 
-        <.text(
-          ^.x := labelEndPx - generalMargin/2,
-          ^.y := textMiddleLine(idx),
-          ^.textAnchor := textAnchorEnd,
-          dominantBaseline := dominantBaselineCentral,
+      <.text(
+        ^.x := labelEndPx - generalMargin/2,
+        ^.y := textMiddleLine(idx),
+        ^.textAnchor := textAnchorEnd,
+        dominantBaseline := dominantBaselineCentral,
+        <.tspan(
+          ^.fill := "red",
+          <.title(s"$numberOfErrors build was not shown due to errors. Please check out the JavaScript console for details."),
+          warningMsg,
+        ),
+        a(
+          href := jobState.static.urls.userRoot.u.rawString,
+          target := "_blank",
           <.tspan(
-            ^.fill := "red",
-            <.title(s"$numberOfErrors build was not shown due to errors. Please check out the JavaScript console for details."),
-            warningMsg,
-          ),
-          a(
-            href := jobState.request.urls.userRoot.u.rawString,
-            target := "_blank",
-            <.tspan(
-              textDecoration := "underline",
-              ^.fill := "black",
-              jobState.request.name.s
-            )
+            textDecoration := "underline",
+            ^.fill := "black",
+            jobState.static.name.s
           )
         )
+      )
 
-      }
+    }
 
-      //todo add links to labels and builds
-      val drawObjs = ciState.results.zipWithIndex.map { case (jobState, idx) =>
-        val oneStrip = nestAt(
-          x = labelEndPx,
-          y = backgroundBaseLine(idx),
-          elements = List(
-            strip(
-              jobAreaWidthPx = jobAreaWidthPx,
-              stripHeight = space,
-              colors(idx % colors.size),
-              jobRectanges(jobState = jobState, jobArea = jobArea, rectangleHeight = (space * 0.75).toInt,
-                stripHeight = space)
-            )
+    //todo add links to labels and builds
+    val drawObjs = ciState.results.zipWithIndex.map { case (jobState, idx) =>
+      val oneStrip = nestAt(
+        x = labelEndPx,
+        y = backgroundBaseLine(idx),
+        elements = List(
+          strip(
+            jobAreaWidthPx = jobAreaWidthPx,
+            stripHeight = space,
+            colors(idx % colors.size),
+            jobRectanges(jobState = jobState, jobArea = jobArea, rectangleHeight = (space * 0.75).toInt,
+              stripHeight = space)
           )
         )
-        oneStrip
-      }
-      val periodText = <.text(^.x := labelEndPx + jobAreaWidthPx, ^.y := backgroundBaseLine(-1),
-        s"${s.drawingAreaDuration}", ^.textAnchor := textAnchorEnd, dominantBaseline := "text-before-edge")
-      val wheelListener = html_<^.^.onWheel ==> handleWheel
-      val dragListeners = List(html_<^.^.onMouseDown ==> handleDown,
-        html_<^.^.onMouseMove ==> handleMove,
-        html_<^.^.onMouseUp ==> handleUp,
       )
+      oneStrip
+    }
+    val periodText = <.text(^.x := labelEndPx + jobAreaWidthPx, ^.y := backgroundBaseLine(-1),
+      s"${s.drawingAreaDuration}", ^.textAnchor := textAnchorEnd, dominantBaseline := "text-before-edge")
+    val wheelListener = html_<^.^.onWheel ==> handleWheel
+    val dragListeners = List(html_<^.^.onMouseDown ==> handleDown,
+      html_<^.^.onMouseMove ==> handleMove,
+      html_<^.^.onMouseUp ==> handleUp,
+    )
 
-      val groupedDrawObjs = <.g((drawObjs ++ dragListeners) :+ wheelListener: _*)
-      val checkboxId = "follow"
-      val input = <.foreignObject(
-        ^.x := labelEndPx,
-        ^.y := backgroundBaseLine(-1),
-        ^.width := 100, //single line
-        //todo replace this with SVG checkbox, this is quite hard to align
-        html_<^.<div(
-          html_<^.< input(
-            html_<^.^.id := checkboxId,
-            html_<^.^.`type` := "checkbox",
-            html_<^.^.checked := s.followTime,
-            html_<^.^.onChange --> $.modState { s =>
-              val follow = !s.followTime
-              val endTime = if (follow) Instant.now else s.endTime
-              s.copy(followTime = follow, endTime = endTime)
-            }
-          ),
-          html_<^.<.label(html_<^.^.`for` := checkboxId, "Follow")
-        )
+    val groupedDrawObjs = <.g((drawObjs ++ dragListeners) :+ wheelListener: _*)
+    val checkboxId = "follow"
+    val input = <.foreignObject(
+      ^.x := labelEndPx,
+      ^.y := backgroundBaseLine(-1),
+      ^.width := 100, //single line
+      //todo replace this with SVG checkbox, this is quite hard to align
+      html_<^.<div(
+        html_<^.< input(
+          html_<^.^.id := checkboxId,
+          html_<^.^.`type` := "checkbox",
+          html_<^.^.checked := s.followTime,
+          html_<^.^.onChange --> $.modState { s =>
+            val follow = !s.followTime
+            val endTime = if (follow) Instant.now else s.endTime
+            s.copy(followTime = follow, endTime = endTime)
+          }
+        ),
+        html_<^.<.label(html_<^.^.`for` := checkboxId, "Follow")
       )
-      val offsetOnPageY = 50
-      val svgParams = List(
-        moveTo(y = offsetOnPageY, elements = List(groupedDrawObjs, verticleLines, periodText) ++ labels :+ input),
-        ^.width := windowWidthPx, ^.height := timestampTextYPx + offsetOnPageY + 10 //+10 to let the bottom of the text in
-      )
+    )
+    val offsetOnPageY = 50
+    val svgParams = List(
+      moveTo(y = offsetOnPageY, elements = List(groupedDrawObjs, verticleLines, periodText) ++ labels :+ input),
+      ^.width := windowWidthPx, ^.height := timestampTextYPx + offsetOnPageY + 10 //+10 to let the bottom of the text in
+    )
 
-      <.svg(
-        svgParams: _*
-      )
-    }.getOrElse(html_<^.<.p("No data yet"))
+    <.svg(
+      svgParams: _*
+    )
+
   }
   def handleWheel(e: SyntheticWheelEvent[SVGElement]): CallbackTo[Unit] = {
    e.stopPropagationCB >> e.preventDefaultCB >>
@@ -254,7 +255,7 @@ object Canvas {
   @SuppressWarnings(Array(Public))
   def jobCanvas(timers: JsTimers, autowire: MockableAutowire)(implicit ec: ExecutionContext) = {
     ScalaComponent.builder[Unit]("Timer")
-      .initialState(State(queryJobWindowWidth(), ResultAndTime(CachedResult(None), Instant.now), drawingAreaDuration = initialDuration, durationIdx = 4, //:(
+      .initialState(State(queryJobWindowWidth(), ResultAndTime(CachedResult(Seq.empty), Instant.now), drawingAreaDuration = initialDuration, durationIdx = 4, //:(
         Instant.now(), mouseDownY = None, endTimeAtMouseDown = Instant.now, followTime = true))
       .backend(new JobCanvasImpl(_, timers, autowire))
       .renderS(_.backend.render(_))

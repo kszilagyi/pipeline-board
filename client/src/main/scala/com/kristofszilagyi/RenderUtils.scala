@@ -107,69 +107,79 @@ object RenderUtils extends LazyLogging {
   }
 
   def jobRectanges(jobState: JobDetails, jobArea: JobArea, rectangleHeight: Int, stripHeight: Int): Seq[TagOf[SVGElement]] = {
-    jobState.r match {
-      case Left(err) =>
+    jobState.maybeDynamic match {
+      case None =>
         List(<.text(
           ^.fill := "red",
           alignmentBaseline := alignmentBaselineMiddle,
           ^.y := stripHeight/2,
-          err.s
+          "No data yet"
         ))
-      case Right(runs) =>
-        runs.flatMap(either => either match {
-          case Right(build) =>
-            val startRelativeToDrawingAreaBeginning = (build.buildStart - jobArea.startTime).max(0.seconds)
-            val endRelativeToDrawingAreaBeginning = build.maybeBuildFinish match {
-              case Some(buildFinish) => (buildFinish - jobArea.startTime).min(jobArea.length)
-              case None => jobArea.length
-            }
+      case Some(dynamic) =>
+        dynamic.r match {
+          case Left(err) =>
+            List(<.text(
+              ^.fill := "red",
+              alignmentBaseline := alignmentBaselineMiddle,
+              ^.y := stripHeight / 2,
+              err.s
+            ))
+          case Right(runs) =>
+            runs.flatMap(either => either match {
+              case Right(build) =>
+                val startRelativeToDrawingAreaBeginning = (build.buildStart - jobArea.startTime).max(0.seconds)
+                val endRelativeToDrawingAreaBeginning = build.maybeBuildFinish match {
+                  case Some(buildFinish) => (buildFinish - jobArea.startTime).min(jobArea.length)
+                  case None => jobArea.length
+                }
 
-            val buildRectangle = if (endRelativeToDrawingAreaBeginning.toNanos > 0 &&
-              startRelativeToDrawingAreaBeginning < jobArea.length) {
+                val buildRectangle = if (endRelativeToDrawingAreaBeginning.toNanos > 0 &&
+                  startRelativeToDrawingAreaBeginning < jobArea.length) {
 
-              val relativeStartRatio = startRelativeToDrawingAreaBeginning / jobArea.length
-              val relativeEndRatio = endRelativeToDrawingAreaBeginning / jobArea.length
+                  val relativeStartRatio = startRelativeToDrawingAreaBeginning / jobArea.length
+                  val relativeEndRatio = endRelativeToDrawingAreaBeginning / jobArea.length
 
-              val relativeWidthRatio = relativeEndRatio - relativeStartRatio //todo assert if this is negative, also round up to >10?
-              val startPx = relativeStartRatio * jobArea.widthPx
-              //todo this will go out of the drawing area, fix
-              val widthPx = Math.max(4, relativeWidthRatio * jobArea.widthPx) //todo display these nicely, probably not really a problem
-              //todo header, colors, hovering, zooming, horizontal lines, click
+                  val relativeWidthRatio = relativeEndRatio - relativeStartRatio //todo assert if this is negative, also round up to >10?
+                  val startPx = relativeStartRatio * jobArea.widthPx
+                  //todo this will go out of the drawing area, fix
+                  val widthPx = Math.max(4, relativeWidthRatio * jobArea.widthPx) //todo display these nicely, probably not really a problem
+                  //todo header, colors, hovering, zooming, horizontal lines, click
 
-              val style: List[TagMod] = List(MyStyles.rectange, build.buildStatus match {
-                case Created => MyStyles.created
-                case Pending => MyStyles.pending
-                case Building => MyStyles.building
-                case Failed => MyStyles.failed
-                case Successful => MyStyles.success
-                case Aborted => MyStyles.aborted
-                case Unstable => MyStyles.unstable
-              })
+                  val style: List[TagMod] = List(MyStyles.rectange, build.buildStatus match {
+                    case Created => MyStyles.created
+                    case Pending => MyStyles.pending
+                    case Building => MyStyles.building
+                    case Failed => MyStyles.failed
+                    case Successful => MyStyles.success
+                    case Aborted => MyStyles.aborted
+                    case Unstable => MyStyles.unstable
+                  })
 
-              val finishString = build.maybeBuildFinish.map(time => s"Finish: $time\n").getOrElse("")
-              val nonStyle = List(
-                ^.x := startPx.toInt,
-                ^.y := (stripHeight - rectangleHeight) / 2,
-                ^.width := widthPx.toInt,
-                ^.height := rectangleHeight.toInt,
-                className := s"build_rect",
-                //todo add length
-                //todo replace this with jQuery or sg similar and make it pop up immediately not after delay and not browser dependent way
-                <.title(s"Id: ${build.buildNumber.i}\nStart: ${build.buildStart}\n${finishString}Status: ${build.buildStatus}")
-              )
-              Some(
-                a(href := jobState.request.buildUi(build.buildNumber).u.toString(),
-                  target := "_blank",
-                  <.rect(nonStyle ++ style: _*)
-                )
-              )
-            } else
-              None
-            buildRectangle.toList
-          case Left(error) =>
-            logger.warn(s"Build failed to query: ${error.s}")
-            None.toList
-        })
+                  val finishString = build.maybeBuildFinish.map(time => s"Finish: $time\n").getOrElse("")
+                  val nonStyle = List(
+                    ^.x := startPx.toInt,
+                    ^.y := (stripHeight - rectangleHeight) / 2,
+                    ^.width := widthPx.toInt,
+                    ^.height := rectangleHeight.toInt,
+                    className := s"build_rect",
+                    //todo add length
+                    //todo replace this with jQuery or sg similar and make it pop up immediately not after delay and not browser dependent way
+                    <.title(s"Id: ${build.buildNumber.i}\nStart: ${build.buildStart}\n${finishString}Status: ${build.buildStatus}")
+                  )
+                  Some(
+                    a(href := jobState.static.buildUi(build.buildNumber).u.toString(),
+                      target := "_blank",
+                      <.rect(nonStyle ++ style: _*)
+                    )
+                  )
+                } else
+                  None
+                buildRectangle.toList
+              case Left(error) =>
+                logger.warn(s"Build failed to query: ${error.s}")
+                None.toList
+            })
+        }
     }
   }
 }

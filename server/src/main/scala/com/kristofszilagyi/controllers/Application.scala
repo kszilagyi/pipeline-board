@@ -3,7 +3,6 @@ package com.kristofszilagyi.controllers
 import java.net.URLEncoder
 import javax.inject._
 
-import com.kristofszilagyi.Aggregator
 import com.kristofszilagyi.cache.ResultCache
 import com.kristofszilagyi.fetchers.{GitLabCiFetcher, GitLabCiJob, JenkinsFetcher}
 import com.kristofszilagyi.shared.CssSettings.settings._
@@ -17,6 +16,7 @@ import play.api.mvc._
 import com.netaporter.uri.dsl._
 import slogging.{LazyLogging, LoggerConfig, PrintLoggerFactory}
 
+import scala.collection.immutable.ListSet
 import scala.concurrent.ExecutionContext
 import scala.io.Source
 
@@ -55,11 +55,10 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
         jobConfig.accessToken, jobConfig.jobNameOnGitLab
       )
     }
-    val aggregator = new Aggregator(Seq(
-      new JenkinsFetcher(wsClient, jenkinsJobs),
-      new GitLabCiFetcher(wsClient, gitLabJobs)
-    ))
-    val resultCache = new ResultCache(aggregator.behavior)
+    val fetchers =
+      jenkinsJobs.map(new JenkinsFetcher(wsClient, _)) ++ gitLabJobs.map(new GitLabCiFetcher(wsClient, _))
+
+    val resultCache = new ResultCache(ListSet(jenkinsJobs ++ gitLabJobs.map(_.common): _*), fetchers)
     new AutowireServer(new AutowireApiImpl(resultCache))
   }
 
