@@ -16,4 +16,4 @@ package object fetchers {
 
 }
 
-final case class FetcherResult(results: JobDetails)
+final case class FetcherResult(result: JobDetails)

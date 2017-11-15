@@ -20,8 +20,10 @@ class ResultCache(jobs: ListSet[Job], fetchers: Traversable[Fetcher]) extends La
   val behaviour: Behavior[ResultCacheIncoming] = {
     Actor.deferred { ctx =>
       fetchers.foreach{ fetcher =>
-        val ref = ctx.spawn(fetcher.behaviour, fetcher.name)
-        ctx.watch(ref)
+        val fetcherRef = ctx.spawn(fetcher.behaviour, fetcher.name)
+        ctx.watch(fetcherRef)
+        val heartbeatRef = ctx.spawn(new Heartbeat(fetcherRef, ctx.self).behaviour, fetcher.name + "-heart")
+        ctx.watch(heartbeatRef)
       }
 
       @SuppressWarnings(Array(Wart.Recursion))
