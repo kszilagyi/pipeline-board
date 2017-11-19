@@ -3,7 +3,6 @@ package com.kristofszilagyi
 import java.time.{Instant, ZoneId}
 
 import com.kristofszilagyi.Canvas.queryJobWindowWidth
-import com.kristofszilagyi.JobCanvasImpl.initialDuration
 import com.kristofszilagyi.RenderUtils._
 import com.kristofszilagyi.shared.InstantOps._
 import com.kristofszilagyi.shared.MyStyles.{labelEndPx, rightMargin}
@@ -21,14 +20,13 @@ import slogging.LazyLogging
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration.Infinite
-import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.concurrent.duration.{DurationDouble, DurationInt, FiniteDuration}
 import scala.scalajs.js
 
-final case class State(windowWidthPx: Int, ciState: ResultAndTime, drawingAreaDuration: FiniteDuration, durationIdx: Int,
+final case class State(windowWidthPx: Int, ciState: ResultAndTime, drawingAreaDurationIterator: BidirectionalIterator[FiniteDuration],
                        endTime: Instant, mouseDownY: Option[Int], endTimeAtMouseDown: Instant, followTime: Boolean)
 
 object JobCanvasImpl {
-  val initialDuration: FiniteDuration = 24.hours
 }
 
 final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowireApi: MockableAutowire)
@@ -53,15 +51,13 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
   }
 
   def adjustZoomLevel(delta: Double): CallbackTo[Unit] = {
-    val validDurations = List(1.hour, 2.hours, 5.hours, 12.hours, initialDuration, 2.days, 5.days, 7.days,
-                              14.days, 30.days, 60.days, 180.days, 365.days).sorted
-    $.modState(s => {
-      val idx = s.durationIdx
-      val dir = math.signum(delta.toInt)
 
-      val newIdx = (idx + dir).min(validDurations.length - 1).max(0)
-      val newDuration = validDurations(newIdx)
-      s.copy(drawingAreaDuration = newDuration, durationIdx = newIdx)
+    $.modState(s => {
+      val newIterator = if (delta > 0) s.drawingAreaDurationIterator.moveRight
+      else if (delta < 0) s.drawingAreaDurationIterator.moveLeft
+      else s.drawingAreaDurationIterator
+
+      s.copy(drawingAreaDurationIterator = newIterator)
     })
   }
 
@@ -69,7 +65,7 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
   def adjustEndTime(delta: Int): CallbackTo[Unit] = {
     $.modState(s => {
       val jobAreaWidthPx = s.windowWidthPx
-      val timeDelta = (delta.toDouble / jobAreaWidthPx) * s.drawingAreaDuration match {
+      val timeDelta = (delta.toDouble / jobAreaWidthPx) * s.drawingAreaDurationIterator.value match {
         case _: Infinite => 0.seconds
         case f: FiniteDuration => f
       }
@@ -106,7 +102,7 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
     val jobAreaWidthPx = windowWidthPx - labelEndPx - rightMargin
     val space = 30
     val generalMargin = 10
-    import s.drawingAreaDuration
+    import s.drawingAreaDurationIterator
 
     def textMiddleLine(idx: Int): Int = (backgroundBaseLine(idx) + backgroundBaseLine(idx + 1)) / 2
 
@@ -117,7 +113,7 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
     //todo handle if jobs are not fecthed yet
     //todo handle if data is stale
 
-    val jobArea = JobArea(jobAreaWidthPx, s.endTime, drawingAreaDuration)
+    val jobArea = JobArea(jobAreaWidthPx, s.endTime, drawingAreaDurationIterator.value)
     val topOfVerticalLinesYPx = backgroundBaseLine(0)
     val bottomOfVerticalLinesYPx = backgroundBaseLine(0) + ciState.results.size * space + generalMargin
     val timestampTextYPx = bottomOfVerticalLinesYPx + generalMargin
@@ -177,7 +173,7 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
       oneStrip
     }
     val periodText = <.text(^.x := labelEndPx + jobAreaWidthPx, ^.y := backgroundBaseLine(-1),
-      s"${s.drawingAreaDuration}", ^.textAnchor := textAnchorEnd, dominantBaseline := "text-before-edge")
+      s"${s.drawingAreaDurationIterator.value}", ^.textAnchor := textAnchorEnd, dominantBaseline := "text-before-edge")
     val wheelListener = html_<^.^.onWheel ==> handleWheel
     val dragListeners = List(html_<^.^.onMouseDown ==> handleDown,
       html_<^.^.onMouseMove ==> handleMove,
@@ -255,9 +251,13 @@ object Canvas {
 
   @SuppressWarnings(Array(Public))
   def jobCanvas(timers: JsTimers, autowire: MockableAutowire)(implicit ec: ExecutionContext) = {
+    val validDurations = List(1.hour, 1.5.hours, 2.hours, 3.hours, 4.hours, 6.hours, 9.hours, 12.hours, 16.hours, 24.hours,
+      36.hours, 2.days, 3.days, 5.days, 7.days, 10.days,
+      14.days, 21.days, 30.days, 45.days, 60.days, 90.days, 120.days, 180.days, 270.days, 365.days).sorted
+
     ScalaComponent.builder[Unit]("Timer")
       .initialState(State(queryJobWindowWidth(), ResultAndTime(CachedResult(Seq.empty), Instant.now),
-        drawingAreaDuration = initialDuration, durationIdx = 4, //:(
+        drawingAreaDurationIterator = BidirectionalIterator(validDurations, 10), //:(
         Instant.now(), mouseDownY = None, endTimeAtMouseDown = Instant.now, followTime = true))
       .backend(new JobCanvasImpl(_, timers, autowire))
       .renderS(_.backend.render(_))
