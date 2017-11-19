@@ -257,7 +257,7 @@ object Canvas {
 
     ScalaComponent.builder[Unit]("Timer")
       .initialState(State(queryJobWindowWidth(), ResultAndTime(CachedResult(Seq.empty), Instant.now),
-        drawingAreaDurationIterator = BidirectionalIterator(validDurations, 10), //:(
+        drawingAreaDurationIterator = BidirectionalIterator(validDurations, 9), //:(
         Instant.now(), mouseDownY = None, endTimeAtMouseDown = Instant.now, followTime = true))
       .backend(new JobCanvasImpl(_, timers, autowire))
       .renderS(_.backend.render(_))
