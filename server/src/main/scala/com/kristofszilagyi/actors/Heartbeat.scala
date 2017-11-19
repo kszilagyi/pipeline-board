@@ -4,7 +4,6 @@ import akka.typed.{ActorRef, Behavior}
 import akka.typed.scaladsl.Actor
 import com.kristofszilagyi.FetcherResult
 import com.kristofszilagyi.fetchers.JenkinsFetcher.Fetch
-import com.kristofszilagyi.shared.Wart
 import com.kristofszilagyi.shared.Wart.discard
 import slogging.LazyLogging
 

@@ -53,7 +53,8 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
   }
 
   def adjustZoomLevel(delta: Double): CallbackTo[Unit] = {
-    val validDurations = List(1.hour, 2.hours, 5.hours, 12.hours, initialDuration, 2.days, 5.days, 7.days, 14.days, 30.days, 60.days, 180.days, 365.days).sorted
+    val validDurations = List(1.hour, 2.hours, 5.hours, 12.hours, initialDuration, 2.days, 5.days, 7.days,
+                              14.days, 30.days, 60.days, 180.days, 365.days).sorted
     $.modState(s => {
       val idx = s.durationIdx
       val dir = math.signum(delta.toInt)
@@ -255,7 +256,8 @@ object Canvas {
   @SuppressWarnings(Array(Public))
   def jobCanvas(timers: JsTimers, autowire: MockableAutowire)(implicit ec: ExecutionContext) = {
     ScalaComponent.builder[Unit]("Timer")
-      .initialState(State(queryJobWindowWidth(), ResultAndTime(CachedResult(Seq.empty), Instant.now), drawingAreaDuration = initialDuration, durationIdx = 4, //:(
+      .initialState(State(queryJobWindowWidth(), ResultAndTime(CachedResult(Seq.empty), Instant.now),
+        drawingAreaDuration = initialDuration, durationIdx = 4, //:(
         Instant.now(), mouseDownY = None, endTimeAtMouseDown = Instant.now, followTime = true))
       .backend(new JobCanvasImpl(_, timers, autowire))
       .renderS(_.backend.render(_))
