@@ -18,10 +18,20 @@ object JobConfig {
   implicit val urlRestFormat: YamlFormat[RestRoot] = wrappedYamlString(s => RestRoot(RawUrl(Uri.parse(s))))(_.u.rawString)
 }
 
-object JenkinsJobConfig {
-  implicit val format: YamlFormat[JenkinsJobConfig] = yamlFormat2(JenkinsJobConfig.apply)
+object JenkinsAccessToken {
+  implicit val format: YamlFormat[JenkinsAccessToken] = wrappedYamlString(JenkinsAccessToken.apply)(_.s)
 }
-final case class JenkinsJobConfig(name: JobDisplayName, url: UserRoot)
+final case class JenkinsAccessToken(s: String)
+
+object JenkinsUser {
+  implicit val format: YamlFormat[JenkinsUser] = wrappedYamlString(JenkinsUser.apply)(_.s)
+}
+final case class JenkinsUser(s: String)
+
+object JenkinsJobConfig {
+  implicit val format: YamlFormat[JenkinsJobConfig] = yamlFormat4(JenkinsJobConfig.apply)
+}
+final case class JenkinsJobConfig(name: JobDisplayName, url: UserRoot, user: Option[JenkinsUser], accessToken: Option[JenkinsAccessToken])
 
 object JenkinsConfig {
   implicit val format: YamlFormat[JenkinsConfig] = yamlFormat1(JenkinsConfig.apply)

@@ -4,7 +4,7 @@ import java.net.URLEncoder
 import javax.inject._
 
 import com.kristofszilagyi.actors.ResultCache
-import com.kristofszilagyi.fetchers.{GitLabCiFetcher, GitLabCiJob, JenkinsFetcher}
+import com.kristofszilagyi.fetchers._
 import com.kristofszilagyi.shared.CssSettings.settings._
 import com.kristofszilagyi.shared.JobType.{GitLabCi, Jenkins}
 import com.kristofszilagyi.shared._
@@ -44,9 +44,19 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
     val configPath = s"$home/.pipeline_board/config"
     val config = Config.format.read(Source.fromFile(configPath).mkString.parseYaml)
     logger.info(s"Congif is: $config")
-    val jenkinsJobs = config.jenkins.jobs.map(jobConfig =>
-      Job(jobConfig.name, Urls(userRoot = jobConfig.url,restRoot = RestRoot(jobConfig.url.u / "api/json")), Jenkins)
-    )
+
+    @SuppressWarnings(Array(Wart.Throw))
+    val jenkinsJobs = config.jenkins.jobs.map { jobConfig =>
+      val creds = (jobConfig.user, jobConfig.accessToken) match {
+        case (Some(user), Some(token)) => Some(JenkinsCredentials(user, token))
+        case (None, None) => None
+        case other => throw new AssertionError(s"Either both access token and user has to be defined or neither: $other")
+      }
+      JenkinsJob(
+        Job(jobConfig.name, Urls(userRoot = jobConfig.url, restRoot = RestRoot(jobConfig.url.u / "api/json")), Jenkins),
+        creds
+      )
+    }
     val gitLabJobs = config.gitLabCi.jobs.map { jobConfig =>
       val root = jobConfig.url
       val jobPath = URLEncoder.encode(root.u.u.pathParts.map(_.part).mkString("/"), "utf-8")
@@ -59,11 +69,11 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
     val fetchers =
       jenkinsJobs.map(new JenkinsFetcher(wsClient, _)) ++ gitLabJobs.map(new GitLabCiFetcher(wsClient, _))
 
-    val jobs = jenkinsJobs ++ gitLabJobs.map(_.common)
+    val jobs = jenkinsJobs.map(_.common) ++ gitLabJobs.map(_.common)
     val jobSet = ListSet(jobs: _*)
     assert(jobs.size ==== jobSet.size, "Jobs are not unique")
     assert(jobs.map(_.name).toSet.size ==== jobs.map(_.name).size, "Jobs names are not unique")
-    val resultCache = new ResultCache(ListSet(jenkinsJobs ++ gitLabJobs.map(_.common): _*), fetchers)
+    val resultCache = new ResultCache(ListSet(jenkinsJobs.map(_.common) ++ gitLabJobs.map(_.common): _*), fetchers)
     new AutowireServer(new AutowireApiImpl(resultCache))
   }
 
