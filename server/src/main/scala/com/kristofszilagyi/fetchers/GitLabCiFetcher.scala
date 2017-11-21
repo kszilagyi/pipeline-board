@@ -93,13 +93,17 @@ object GitLabCiFetcher {
   }
 
   private def extractNextPageLink(requestUrl: RawUrl, result: WSRequest#Response): Either[ResponseError, Option[RawUrl]] = {
-    val maybeLinkHeaderString = result.header("Link") match {
-      case Some(linkHeader) => Right(linkHeader)
-      case None => Left(ResponseError("Link header is missing"))
-    }
+    if (result.status !=== 200) {
+      Left(ResponseError(s"Invalid status code while paging (${result.status}"))
+    } else {
+      val maybeLinkHeaderString = result.header("Link") match {
+        case Some(linkHeader) => Right(linkHeader)
+        case None => Left(ResponseError("Link header is missing"))
+      }
 
-    maybeLinkHeaderString flatMap { linkString: String =>
-      extractNextPageLinkFromLinkHeader(requestUrl, linkString)
+      maybeLinkHeaderString flatMap { linkString: String =>
+        extractNextPageLinkFromLinkHeader(requestUrl, linkString)
+      }
     }
   }
 
