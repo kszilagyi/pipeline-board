@@ -30,7 +30,7 @@ object MyStyles extends StyleSheet.Inline {
   val pending = style(svgFill := orange)
 
   val building = style(
-    svgFill := grey,
+    svgFill := purple,
     animationName(blinker),
     animationDuration(2.seconds),
     animationIterationCount.infinite,
@@ -43,7 +43,7 @@ object MyStyles extends StyleSheet.Inline {
 
   val success = style(svgFill := green)
 
-  val aborted = style(svgFill := purple)
+  val aborted = style(svgFill := grey)
 
   val unstable = style(svgFill := pink)
 
