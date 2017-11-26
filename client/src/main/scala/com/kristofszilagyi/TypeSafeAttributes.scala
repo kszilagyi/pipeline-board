@@ -49,22 +49,21 @@ object TypeSafeAttributes {
 
     def x1(value: XPixel)(implicit ev: Has[Position1And2.type, T]): TagOf[T] = {
       discard(ev)
-      tagOf(^.x := value.d.toInt)
+      tagOf(^.x1 := value.d.toInt)
     }
     def y1(value: YPixel)(implicit ev: Has[Position1And2.type, T]): TagOf[T] = {
       discard(ev)
-      tagOf(^.y := value.d.toInt)
+      tagOf(^.y1 := value.d.toInt)
     }
 
     def x2(value: XPixel)(implicit ev: Has[Position1And2.type, T]): TagOf[T] = {
       discard(ev)
-      tagOf(^.x := value.d.toInt)
+      tagOf(^.x2 := value.d.toInt)
     }
     def y2(value: YPixel)(implicit ev: Has[Position1And2.type, T]): TagOf[T] = {
       discard(ev)
-      tagOf(^.y := value.d.toInt)
+      tagOf(^.y2 := value.d.toInt)
     }
-
 
     def width(value: WPixel)(implicit ev: Has[Dimension.type, T]): TagOf[T] = {
       discard(ev)
