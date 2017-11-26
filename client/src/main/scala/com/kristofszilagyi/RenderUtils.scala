@@ -58,7 +58,7 @@ object RenderUtils extends LazyLogging {
 
   @SuppressWarnings(Array(Wart.DefaultArguments))
   def moveTo(x: XPixel = 0.xpx, y: YPixel = 0.ypx, elements: Seq[TagMod]): TagOf[G] = {
-    <.g(elements ++ List(^.transform := s"translate($x, $y)"): _*)
+    <.g(elements ++ List(^.transform := s"translate(${x.d.toInt}, ${y.d.toInt})"): _*)
   }
 
   def moveTo(x: XPixel, y: YPixel, elements: TagMod): TagOf[G] = {
