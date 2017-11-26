@@ -115,14 +115,7 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
 
     val jobArea = JobArea(jobAreaWidth, s.endTime, drawingAreaDurationIterator.value)
     val topOfVerticalLines = backgroundBaseLine(0)
-    val bottomOfVerticalLines = backgroundBaseLine(0) + stripHeight.toY * ciState.groups.size + generalMargin.ypx
-    val timestampTextY = bottomOfVerticalLines + generalMargin.ypx
 
-    val verticleLines = moveTo(
-      x = labelEnd,
-      elements = verticalLines(topOfVerticalLines = topOfVerticalLines, bottomOfVerticalLines = bottomOfVerticalLines,
-        timestampText = timestampTextY, jobArea, timeZone = ZoneId.systemDefault())
-    )
     //todo show warning if some of the queries failed
     val unpositionedLabels = ciState.groups.toList.flatMap { case (groupName, group) =>
       group.jobs.map { jobState =>
@@ -159,7 +152,16 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
       }
     }
 
-    val labels = VerticalBoxLayout.arrange(unpositionedLabels)
+    val ArrangeResult(labels, fullHeight) = VerticalBoxLayout.arrange(unpositionedLabels)
+
+    val bottomOfVerticalLines = backgroundBaseLine(0) + fullHeight.toY + generalMargin.ypx
+    val timestampTextY = bottomOfVerticalLines + generalMargin.ypx
+
+    val verticleLines = moveTo(
+      x = labelEnd,
+      elements = verticalLines(topOfVerticalLines = topOfVerticalLines, bottomOfVerticalLines = bottomOfVerticalLines,
+        timestampText = timestampTextY, jobArea, timeZone = ZoneId.systemDefault())
+    )
 
     //todo add links to labels and builds
     val uncoloredStrips = ciState.groups.toList.flatMap { case (name, group) =>
@@ -185,7 +187,7 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
       uncolored(colors(idx % colors.size))
     }
 
-    val strips = VerticalBoxLayout.arrange(unpositionedStrips)
+    val ArrangeResult(strips, _) = VerticalBoxLayout.arrange(unpositionedStrips)
 
     //colors(idx % colors.size)
     val periodText = <.text(s"${s.drawingAreaDurationIterator.value}", ^.textAnchor := textAnchorEnd, dominantBaseline := "text-before-edge")
