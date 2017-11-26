@@ -25,6 +25,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration.Infinite
 import scala.concurrent.duration.{DurationDouble, DurationInt, FiniteDuration}
 import scala.scalajs.js
+import scalacss.ScalaCssReact._
 
 final case class State(windowWidth: WPixel, ciState: ResultAndTime, drawingAreaDurationIterator: BidirectionalIterator[FiniteDuration],
                        endTime: Instant, mouseDownY: Option[Int], endTimeAtMouseDown: Instant, followTime: Boolean)
@@ -121,13 +122,13 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
       List(
         ElementWithHeight(
           <.text(
-            ^.textAnchor := textAnchorEnd,
+            ^.textAnchor := textAnchorMiddle,
             dominantBaseline := dominantBaselineCentral,
             <.tspan(
-              ^.fill := "black",
+              MyStyles.groupNameStyle,
               groupName.s
             )
-          ).x(labelEnd - generalMargin.xpx / 2)
+          ).x(labelEnd)
            .y(stripHeight.toY / 2)
           ,
           stripHeight
@@ -182,7 +183,9 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
       List(
         (color: String) => {
           ElementWithHeight(
-            <.rect(),
+            <.rect(^.fill := lineAndGroupNameColor)
+             .width(jobAreaWidth + labelEnd.toW)
+             .height(stripHeight),
             stripHeight
           )
         }

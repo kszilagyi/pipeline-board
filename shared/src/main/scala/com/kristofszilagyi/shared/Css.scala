@@ -5,7 +5,7 @@ import com.kristofszilagyi.shared.pixel.Pixel.RichInt
 
 import scala.concurrent.duration.DurationDouble
 import scala.language.postfixOps
-
+import scalacss.internal.Attrs
 object CssSettings {
   val settings = scalacss.DevDefaults
 }
@@ -49,6 +49,11 @@ object MyStyles extends StyleSheet.Inline {
   val aborted = style(svgFill := grey)
 
   val unstable = style(svgFill := pink)
+
+  val groupNameStyle = style(
+    svgFill := black,
+    Attrs.fontWeight.bold
+  )
 
   val labelEnd = 200.xpx
   val rightMargin = 100.xpx

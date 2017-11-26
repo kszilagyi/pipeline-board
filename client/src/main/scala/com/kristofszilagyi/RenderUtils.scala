@@ -39,9 +39,13 @@ object RenderUtils extends LazyLogging {
   def animation = VdomAttr("animation")
 
   val textAnchorEnd = "end"
+  val textAnchorStart = "start"
+  val textAnchorMiddle = "middle"
 
   val alignmentBaselineMiddle = "middle"
   val dominantBaselineCentral = "central"
+
+  val lineAndGroupNameColor = "darkgrey"
 
   final case class JobArea(width: WPixel, endTime: Instant, drawingAreaDuration: FiniteDuration) {
     def startTime: Instant = endTime - drawingAreaDuration
@@ -76,7 +80,7 @@ object RenderUtils extends LazyLogging {
       List(
         <.line(
           ^.strokeWidth := "1",
-          ^.stroke := "grey"
+          ^.stroke := lineAndGroupNameColor
         ).x1(x)
          .y1(yStart)
          .x2(x)
