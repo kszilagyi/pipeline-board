@@ -5,7 +5,7 @@ import java.time.{Instant, ZoneId}
 import com.kristofszilagyi.Canvas.queryJobWindowWidth
 import com.kristofszilagyi.RenderUtils._
 import com.kristofszilagyi.shared.InstantOps._
-import com.kristofszilagyi.shared.MyStyles.{labelEndPx, rightMargin}
+import com.kristofszilagyi.shared.MyStyles.{labelEnd, rightMargin}
 import com.kristofszilagyi.shared.TypeSafeEqualsOps._
 import com.kristofszilagyi.shared.Wart._
 import com.kristofszilagyi.shared._
@@ -17,13 +17,16 @@ import japgolly.scalajs.react.{BackendScope, Callback, CallbackTo, ScalaComponen
 import org.scalajs.dom.Element
 import org.scalajs.dom.raw.SVGElement
 import slogging.LazyLogging
+import TypeSafeAttributes._
+import com.kristofszilagyi.shared.pixel.Pixel._
 
+import scala.collection.immutable.ListMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration.Infinite
 import scala.concurrent.duration.{DurationDouble, DurationInt, FiniteDuration}
 import scala.scalajs.js
 
-final case class State(windowWidthPx: Int, ciState: ResultAndTime, drawingAreaDurationIterator: BidirectionalIterator[FiniteDuration],
+final case class State(windowWidth: WPixel, ciState: ResultAndTime, drawingAreaDurationIterator: BidirectionalIterator[FiniteDuration],
                        endTime: Instant, mouseDownY: Option[Int], endTimeAtMouseDown: Instant, followTime: Boolean)
 
 object JobCanvasImpl {
@@ -64,8 +67,7 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
 
   def adjustEndTime(delta: Int): CallbackTo[Unit] = {
     $.modState(s => {
-      val jobAreaWidthPx = s.windowWidthPx
-      val timeDelta = (delta.toDouble / jobAreaWidthPx) * s.drawingAreaDurationIterator.value match {
+      val timeDelta = (delta.toDouble / s.windowWidth.d) * s.drawingAreaDurationIterator.value match {
         case _: Infinite => 0.seconds
         case f: FiniteDuration => f
       }
@@ -94,97 +96,110 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
   }
 
   def resized: Callback = {
-    $.modState(s => s.copy(windowWidthPx = Math.max(queryJobWindowWidth(), labelEndPx + rightMargin + 100)))
+    $.modState(s => s.copy(windowWidth = queryJobWindowWidth().max((labelEnd + rightMargin + 100.xpx).toW)))
   }
 
   def render(s: State): TagOf[Element] = {
-    val windowWidthPx = s.windowWidthPx
-    val jobAreaWidthPx = windowWidthPx - labelEndPx - rightMargin
-    val space = 30
+    val windowWidth = s.windowWidth
+    val jobAreaWidth = (windowWidth.toX - labelEnd - rightMargin).toW
+    val stripHeight = 30.hpx
     val generalMargin = 10
     import s.drawingAreaDurationIterator
 
-    def textMiddleLine(idx: Int): Int = (backgroundBaseLine(idx) + backgroundBaseLine(idx + 1)) / 2
-
-    def backgroundBaseLine(idx: Int): Int = idx * space
+    def backgroundBaseLine(idx: Int) = stripHeight.toY * idx
     val colors = List("black", "darkslategrey")
 
     val ciState = s.ciState.cachedResult
     //todo handle if jobs are not fecthed yet
     //todo handle if data is stale
 
-    val jobArea = JobArea(jobAreaWidthPx, s.endTime, drawingAreaDurationIterator.value)
-    val topOfVerticalLinesYPx = backgroundBaseLine(0)
-    val bottomOfVerticalLinesYPx = backgroundBaseLine(0) + ciState.results.size * space + generalMargin
-    val timestampTextYPx = bottomOfVerticalLinesYPx + generalMargin
+    val jobArea = JobArea(jobAreaWidth, s.endTime, drawingAreaDurationIterator.value)
+    val topOfVerticalLines = backgroundBaseLine(0)
+    val bottomOfVerticalLines = backgroundBaseLine(0) + stripHeight.toY * ciState.groups.size + generalMargin.ypx
+    val timestampTextY = bottomOfVerticalLines + generalMargin.ypx
 
     val verticleLines = moveTo(
-      x = labelEndPx,
-      elements = verticalLines(topOfVerticalLinesYPx = topOfVerticalLinesYPx, bottomOfVerticalLinesYPx = bottomOfVerticalLinesYPx,
-        timestampTextYPx = timestampTextYPx, jobArea, timeZone = ZoneId.systemDefault())
+      x = labelEnd,
+      elements = verticalLines(topOfVerticalLines = topOfVerticalLines, bottomOfVerticalLines = bottomOfVerticalLines,
+        timestampText = timestampTextY, jobArea, timeZone = ZoneId.systemDefault())
     )
     //todo show warning if some of the queries failed
-    val labels = ciState.results.zipWithIndex.map { case (jobState, idx) =>
+    val unpositionedLabels = ciState.groups.toList.flatMap { case (groupName, group) =>
+      group.jobs.map { jobState =>
+        val numberOfErrors = jobState.maybeDynamic.map(_.r.getOrElse(Seq.empty).map(_.isLeft).count(_ ==== true)).getOrElse(0)
+        val warningMsg = if (numberOfErrors > 0) {
+          "\u26A0 "
+        } else ""
 
-      val numberOfErrors = jobState.maybeDynamic.map(_.r.getOrElse(Seq.empty).map(_.isLeft).count(_ ==== true)).getOrElse(0)
-      val warningMsg = if (numberOfErrors > 0) {
-        "\u26A0 "
-      } else ""
 
-
-      <.text(
-        ^.x := labelEndPx - generalMargin/2,
-        ^.y := textMiddleLine(idx),
-        ^.textAnchor := textAnchorEnd,
-        dominantBaseline := dominantBaselineCentral,
-        <.tspan(
-          ^.fill := "red",
-          <.title(s"$numberOfErrors build was not shown due to errors. Please check out the JavaScript console for details."),
-          warningMsg,
-        ),
-        a(
-          href := jobState.static.urls.userRoot.u.rawString,
-          target := "_blank",
-          <.tspan(
-            textDecoration := "underline",
-            ^.fill := "black",
-            jobState.static.name.s
+        ElementWithHeight(
+          <.text(
+            ^.textAnchor := textAnchorEnd,
+            dominantBaseline := dominantBaselineCentral,
+            <.tspan(
+              ^.fill := "red",
+              <.title(s"$numberOfErrors build was not shown due to errors. Please check out the JavaScript console for details."),
+              warningMsg,
+            ),
+            a(
+              href := jobState.static.urls.userRoot.u.rawString,
+              target := "_blank",
+              <.tspan(
+                textDecoration := "underline",
+                ^.fill := "black",
+                jobState.static.name.s
+              )
+            )
           )
+          .x(labelEnd - generalMargin.xpx / 2)
+          .y(stripHeight.toY / 2)
+          ,
+          stripHeight
         )
-      )
-
+      }
     }
+
+    val labels = VerticalBoxLayout.arrange(unpositionedLabels)
 
     //todo add links to labels and builds
-    val drawObjs = ciState.results.zipWithIndex.map { case (jobState, idx) =>
-      val oneStrip = nestAt(
-        x = labelEndPx,
-        y = backgroundBaseLine(idx),
-        elements = List(
-          strip(
-            jobAreaWidthPx = jobAreaWidthPx,
-            stripHeight = space,
-            colors(idx % colors.size),
-            jobRectanges(jobState = jobState, jobArea = jobArea, rectangleHeight = (space * 0.75).toInt,
-              stripHeight = space)
+    val uncoloredStrips = ciState.groups.toList.flatMap { case (name, group) =>
+      group.jobs.map { jobDetails =>
+        (color: String) => {
+          val oneStrip = nestAt(
+            x = labelEnd,
+            elements = List(
+              strip(
+                jobAreaWidth = jobAreaWidth,
+                stripHeight = stripHeight,
+                color,
+                jobRectanges(jobState = jobDetails, jobArea = jobArea, rectangleHeight = stripHeight * 0.75,
+                  stripHeight = stripHeight)
+              )
+            )
           )
-        )
-      )
-      oneStrip
+          ElementWithHeight(oneStrip, stripHeight)
+        }
+      }
     }
-    val periodText = <.text(^.x := labelEndPx + jobAreaWidthPx, ^.y := backgroundBaseLine(-1),
-      s"${s.drawingAreaDurationIterator.value}", ^.textAnchor := textAnchorEnd, dominantBaseline := "text-before-edge")
+    val unpositionedStrips = uncoloredStrips.zipWithIndex.map { case (uncolored, idx) =>
+      uncolored(colors(idx % colors.size))
+    }
+
+    val strips = VerticalBoxLayout.arrange(unpositionedStrips)
+
+    //colors(idx % colors.size)
+    val periodText = <.text(s"${s.drawingAreaDurationIterator.value}", ^.textAnchor := textAnchorEnd, dominantBaseline := "text-before-edge")
+      .x(labelEnd + jobAreaWidth.toX)
+      .y(backgroundBaseLine(-1))
     val wheelListener = html_<^.^.onWheel ==> handleWheel
     val dragListeners = List(html_<^.^.onMouseDown ==> handleDown,
       html_<^.^.onMouseMove ==> handleMove,
       html_<^.^.onMouseUp ==> handleUp,
     )
 
-    val groupedDrawObjs = <.g((drawObjs ++ dragListeners) :+ wheelListener: _*)
+    val groupedDrawObjs = <.g((strips ++ dragListeners) :+ wheelListener: _*)
     val checkboxId = "follow"
     val input = <.foreignObject(
-      ^.x := labelEndPx,
-      ^.y := backgroundBaseLine(-1),
       ^.width := 100, //single line
       //todo replace this with SVG checkbox, this is quite hard to align
       html_<^.<div(
@@ -200,16 +215,17 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
         ),
         html_<^.<.label(html_<^.^.`for` := checkboxId, "Follow")
       )
-    )
-    val offsetOnPageY = 50
+    ).x(labelEnd)(anythingPos)
+     .y(backgroundBaseLine(-1))(anythingPos)
+    val offsetOnPageY = 50.ypx
     val svgParams = List(
       moveTo(y = offsetOnPageY, elements = List(groupedDrawObjs, verticleLines, periodText) ++ labels :+ input),
-      ^.width := windowWidthPx, ^.height := timestampTextYPx + offsetOnPageY + 10 //+10 to let the bottom of the text in
     )
 
     <.svg(
       svgParams: _*
-    )
+    ).width(windowWidth)
+     .height((timestampTextY + offsetOnPageY + 10.ypx).toH) //+10 to let the bottom of the text in)
 
   }
   def handleWheel(e: SyntheticWheelEvent[SVGElement]): CallbackTo[Unit] = {
@@ -245,8 +261,8 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
 // which signal minutes, hours, days, weeks. months
 object Canvas {
 
-  def queryJobWindowWidth(): Int = {
-    org.scalajs.dom.document.body.clientWidth
+  def queryJobWindowWidth(): WPixel = {
+    org.scalajs.dom.document.body.clientWidth.wpx
   }
 
   @SuppressWarnings(Array(Public))
@@ -256,7 +272,7 @@ object Canvas {
       14.days, 21.days, 30.days, 45.days, 60.days, 90.days, 120.days, 180.days, 270.days, 365.days).sorted
 
     ScalaComponent.builder[Unit]("Timer")
-      .initialState(State(queryJobWindowWidth(), ResultAndTime(CachedResult(Seq.empty), Instant.now),
+      .initialState(State(queryJobWindowWidth(), ResultAndTime(CachedResult(ListMap.empty), Instant.now),
         drawingAreaDurationIterator = BidirectionalIterator(validDurations, 9), //:(
         Instant.now(), mouseDownY = None, endTimeAtMouseDown = Instant.now, followTime = true))
       .backend(new JobCanvasImpl(_, timers, autowire))

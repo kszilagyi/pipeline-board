@@ -8,11 +8,13 @@ import com.kristofszilagyi.shared.InstantOps._
 import com.kristofszilagyi.shared.ZonedDateTimeOps._
 import com.kristofszilagyi.shared.{JobDetails, MyStyles, Wart}
 import japgolly.scalajs.react.vdom.PackageBase.VdomAttr
-import japgolly.scalajs.react.vdom.svg_<^._
+import japgolly.scalajs.react.vdom.svg_<^.{^, _}
 import japgolly.scalajs.react.vdom.{SvgTagOf => _, TagMod => _, _}
 import org.scalajs.dom.raw._
 import org.scalajs.dom.svg.{A, G, SVG}
 import slogging.LazyLogging
+import TypeSafeAttributes._
+import com.kristofszilagyi.shared.pixel.Pixel._
 
 import scala.collection.immutable
 import scala.concurrent.duration.{DurationLong, FiniteDuration}
@@ -41,89 +43,84 @@ object RenderUtils extends LazyLogging {
   val alignmentBaselineMiddle = "middle"
   val dominantBaselineCentral = "central"
 
-  final case class JobArea(widthPx: Int, endTime: Instant, drawingAreaDuration: FiniteDuration) {
+  final case class JobArea(width: WPixel, endTime: Instant, drawingAreaDuration: FiniteDuration) {
     def startTime: Instant = endTime - drawingAreaDuration
     def length: FiniteDuration = endTime - startTime
   }
   @SuppressWarnings(Array(Wart.DefaultArguments))
-  def nestAt(x: Int = 0, y: Int = 0, elements: Seq[TagMod]): TagOf[SVG] = {
-    <.svg(elements ++ List(^.x := x, ^.y := y): _*)
+  def nestAt(x: XPixel = 0.xpx, y: YPixel = 0.ypx, elements: Seq[TagMod]): TagOf[SVG] = {
+    <.svg(elements: _*).x(x).y(y)
   }
 
-  def nestAt(x: Int, y: Int, elements: TagMod): TagOf[SVG] = {
+  def nestAt(x: XPixel, y: YPixel, elements: TagMod): TagOf[SVG] = {
     nestAt(x, y, List(elements))
   }
 
   @SuppressWarnings(Array(Wart.DefaultArguments))
-  def moveTo(x: Int = 0, y: Int = 0, elements: Seq[TagMod]): TagOf[G] = {
+  def moveTo(x: XPixel = 0.xpx, y: YPixel = 0.ypx, elements: Seq[TagMod]): TagOf[G] = {
     <.g(elements ++ List(^.transform := s"translate($x, $y)"): _*)
   }
 
-  def moveTo(x: Int, y: Int, elements: TagMod): TagOf[G] = {
+  def moveTo(x: XPixel, y: YPixel, elements: TagMod): TagOf[G] = {
     moveTo(x, y, List(elements))
   }
 
-  def verticalLines(topOfVerticalLinesYPx: Int, bottomOfVerticalLinesYPx: Int, timestampTextYPx: Int,
+  def verticalLines(topOfVerticalLines: YPixel, bottomOfVerticalLines: YPixel, timestampText: YPixel,
                     jobArea: JobArea, timeZone: ZoneId): immutable.Seq[TagOf[SVGElement]] = {
     val maxHorizontalBar = 5
     (0 to maxHorizontalBar) flatMap { idx =>
-      val x = (jobArea.widthPx.toDouble / maxHorizontalBar * idx).toInt
-      val yStart = topOfVerticalLinesYPx
-      val yEnd = bottomOfVerticalLinesYPx
+      val x = (jobArea.width / maxHorizontalBar * idx).toX
+      val yStart = topOfVerticalLines
+      val yEnd = bottomOfVerticalLines
       val timeOnBar = jobArea.endTime.atZone(timeZone) - jobArea.drawingAreaDuration + idx.toDouble / maxHorizontalBar * jobArea.drawingAreaDuration
       List(
         <.line(
-          ^.x1 := x,
-          ^.y1 := yStart,
-          ^.x2 := x,
-          ^.y2 := yEnd,
           ^.strokeWidth := "1",
           ^.stroke := "grey"
-        ),
+        ).x1(x)
+         .y1(yStart)
+         .x2(x)
+         .y2(yEnd),
         <.text(
-          ^.x := x,
-          ^.y := timestampTextYPx,
           ^.textAnchor := "middle",
           timeOnBar.format(DateTimeFormatter.ofPattern("uuuu-MMM-dd HH:mm"))
-        )
+        ).x(x)
+         .y(timestampText)
       )
     }
   }
 
-  def strip(jobAreaWidthPx: Int, stripHeight: Int, color: String, elementsInside: Seq[TagMod]): TagOf[SVG] = {
+  def strip(jobAreaWidth: WPixel, stripHeight: HPixel, color: String, elementsInside: Seq[TagMod]): TagOf[SVG] = {
 
     val background = <.rect(
-      ^.height := stripHeight,
-      ^.width := jobAreaWidthPx,
       ^.fill := color,
-    )
+    ).height(stripHeight)
+     .width(jobAreaWidth)
     <.svg(
       List(
-        ^.height := stripHeight,
-        ^.width := jobAreaWidthPx,
         background
       ) ++ elementsInside: _*
-    )
+    ).height(stripHeight)
+     .width(jobAreaWidth)
   }
 
-  def jobRectanges(jobState: JobDetails, jobArea: JobArea, rectangleHeight: Int, stripHeight: Int): Seq[TagOf[SVGElement]] = {
+  def jobRectanges(jobState: JobDetails, jobArea: JobArea, rectangleHeight: HPixel, stripHeight: HPixel): Seq[TagOf[SVGElement]] = {
     jobState.maybeDynamic match {
       case None =>
         List(<.text(
           ^.fill := "red",
           alignmentBaseline := alignmentBaselineMiddle,
-          ^.y := stripHeight/2,
           "No data yet"
-        ))
+        ).y(stripHeight.toY/2),
+        )
       case Some(dynamic) =>
         dynamic.r match {
           case Left(err) =>
             List(<.text(
               ^.fill := "red",
               alignmentBaseline := alignmentBaselineMiddle,
-              ^.y := stripHeight / 2,
               err.s
-            ))
+            ).y(stripHeight.toY/2))
           case Right(runs) =>
             runs.flatMap(either => either match {
               case Right(build) =>
@@ -140,9 +137,9 @@ object RenderUtils extends LazyLogging {
                   val relativeEndRatio = endRelativeToDrawingAreaBeginning / jobArea.length
 
                   val relativeWidthRatio = relativeEndRatio - relativeStartRatio //todo assert if this is negative, also round up to >10?
-                  val startPx = relativeStartRatio * jobArea.widthPx
+                  val startPx = (jobArea.width * relativeStartRatio).toX
                   //todo this will go out of the drawing area, fix
-                  val widthPx = Math.max(4, relativeWidthRatio * jobArea.widthPx) //todo display these nicely, probably not really a problem
+                  val width = 4.wpx.max(jobArea.width * relativeWidthRatio) //todo display these nicely, probably not really a problem
                   //todo header, colors, hovering, zooming, horizontal lines, click
 
                   val style: List[TagMod] = List(MyStyles.rectange, build.buildStatus match {
@@ -157,10 +154,6 @@ object RenderUtils extends LazyLogging {
 
                   val finishString = build.maybeBuildFinish.map(time => s"Finish: $time\n").getOrElse("")
                   val nonStyle = List(
-                    ^.x := startPx.toInt,
-                    ^.y := (stripHeight - rectangleHeight) / 2,
-                    ^.width := widthPx.toInt,
-                    ^.height := rectangleHeight.toInt,
                     className := s"build_rect",
                     //todo add length
                     //todo replace this with jQuery or sg similar and make it pop up immediately not after delay and not browser dependent way
@@ -170,6 +163,10 @@ object RenderUtils extends LazyLogging {
                     a(href := jobState.static.buildUi(build.buildNumber).u.toString(),
                       target := "_blank",
                       <.rect(nonStyle ++ style: _*)
+                        .x(startPx)
+                        .y(((stripHeight - rectangleHeight) / 2).toY)
+                        .width(width)
+                        .height(rectangleHeight)
                     )
                   )
                 } else

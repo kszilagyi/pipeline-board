@@ -17,10 +17,9 @@ import com.netaporter.uri.dsl._
 import slogging.{LazyLogging, LoggerConfig, PrintLoggerFactory}
 import TypeSafeEqualsOps._
 
-import scala.collection.immutable.ListSet
+import scala.collection.immutable.{ListMap, ListSet}
 import scala.concurrent.ExecutionContext
 import scala.io.Source
-
 
 class Application @Inject() (wsClient: WSClient)(val config: Configuration)
                                              (implicit ec: ExecutionContext) extends InjectedController with LazyLogging{
@@ -46,26 +45,33 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
     logger.info(s"Congif is: $config")
 
     @SuppressWarnings(Array(Wart.Throw))
-    val jenkinsJobs = config.jenkins.jobs.map { jobConfig =>
-      val creds = (jobConfig.user, jobConfig.accessToken) match {
-        case (Some(user), Some(token)) => Some(JenkinsCredentials(user, token))
-        case (None, None) => None
-        case other => throw new AssertionError(s"Either both access token and user has to be defined or neither: $other")
+    val groupedJobs = ListMap(config.groups.map { group =>
+      val jenkinsJobs = group.jenkins.jobs.map { jobConfig =>
+        val creds = (jobConfig.user, jobConfig.accessToken) match {
+          case (Some(user), Some(token)) => Some(JenkinsCredentials(user, token))
+          case (None, None) => None
+          case other => throw new AssertionError(s"Either both access token and user has to be defined or neither: $other")
+        }
+        JenkinsJob(
+          Job(jobConfig.name, Urls(userRoot = jobConfig.url, restRoot = RestRoot(jobConfig.url.u / "api/json")), Jenkins),
+          creds
+        )
       }
-      JenkinsJob(
-        Job(jobConfig.name, Urls(userRoot = jobConfig.url, restRoot = RestRoot(jobConfig.url.u / "api/json")), Jenkins),
-        creds
-      )
-    }
-    val gitLabJobs = config.gitLabCi.jobs.map { jobConfig =>
-      val root = jobConfig.url
-      val jobPath = URLEncoder.encode(root.u.u.pathParts.map(_.part).mkString("/"), "utf-8")
-      val restRoot = root.u.u.copy(pathParts = Seq(PathPart("api"), PathPart("v4"), PathPart("projects")) :+ PathPart(jobPath)) //todo url encode
-      GitLabCiJob(
-        Job(jobConfig.name, Urls(userRoot = root, restRoot = RestRoot(RawUrl(restRoot))), GitLabCi),
-        jobConfig.accessToken, jobConfig.jobNameOnGitLab
-      )
-    }
+
+      val gitLabJobs = group.gitLabCi.jobs.map { jobConfig =>
+        val root = jobConfig.url
+        val jobPath = URLEncoder.encode(root.u.u.pathParts.map(_.part).mkString("/"), "utf-8")
+        val restRoot = root.u.u.copy(pathParts = Seq(PathPart("api"), PathPart("v4"), PathPart("projects")) :+ PathPart(jobPath)) //todo url encode
+        GitLabCiJob(
+          Job(jobConfig.name, Urls(userRoot = root, restRoot = RestRoot(RawUrl(restRoot))), GitLabCi),
+          jobConfig.accessToken, jobConfig.jobNameOnGitLab
+        )
+      }
+      (group.groupName, (jenkinsJobs, gitLabJobs))
+    }: _*)
+
+    val jenkinsJobs = groupedJobs.toList.flatMap(_._2._1)
+    val gitLabJobs = groupedJobs.toList.flatMap(_._2._2)
     val fetchers =
       jenkinsJobs.map(new JenkinsFetcher(wsClient, _)) ++ gitLabJobs.map(new GitLabCiFetcher(wsClient, _))
 
@@ -73,7 +79,10 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
     val jobSet = ListSet(jobs: _*)
     assert(jobs.size ==== jobSet.size, "Jobs are not unique")
     assert(jobs.map(_.name).toSet.size ==== jobs.map(_.name).size, "Jobs names are not unique")
-    val resultCache = new ResultCache(ListSet(jenkinsJobs.map(_.common) ++ gitLabJobs.map(_.common): _*), fetchers)
+    val jobsForCache = groupedJobs.map{case (name, (jenkins, gitlab)) =>
+        name -> (jenkins.map(_.common) ++ gitlab.map(_.common))
+    }
+    val resultCache = new ResultCache(jobsForCache, fetchers)
     new AutowireServer(new AutowireApiImpl(resultCache))
   }
 

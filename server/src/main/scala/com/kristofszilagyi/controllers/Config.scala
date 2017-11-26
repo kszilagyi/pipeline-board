@@ -1,5 +1,5 @@
 package com.kristofszilagyi.controllers
-import com.kristofszilagyi.shared.{JobDisplayName, RawUrl, RestRoot, UserRoot}
+import com.kristofszilagyi.shared._
 import com.netaporter.uri.Uri
 import net.jcazevedo.moultingyaml._
 import net.jcazevedo.moultingyaml.DefaultYamlProtocol._
@@ -16,6 +16,7 @@ object JobConfig {
 
   implicit val urlUserFormat: YamlFormat[UserRoot] = wrappedYamlString(s => UserRoot(RawUrl(Uri.parse(s))))(_.u.rawString)
   implicit val urlRestFormat: YamlFormat[RestRoot] = wrappedYamlString(s => RestRoot(RawUrl(Uri.parse(s))))(_.u.rawString)
+  implicit val groupNameFormat: YamlFormat[GroupName] = wrappedYamlString(GroupName.apply)(_.s)
 }
 
 object JenkinsAccessToken {
@@ -63,7 +64,13 @@ object GitLabCiConfig {
 }
 final case class GitLabCiConfig(jobs: Seq[GitLabCiJobConfig])
 
-object Config {
-  implicit val format: YamlFormat[Config] = yamlFormat2(Config.apply)
+
+object ConfigGroup {
+  implicit val format: YamlFormat[ConfigGroup] = yamlFormat3(ConfigGroup.apply)
 }
-final case class Config(jenkins: JenkinsConfig, gitLabCi: GitLabCiConfig)
+final case class ConfigGroup(groupName: GroupName, jenkins: JenkinsConfig, gitLabCi: GitLabCiConfig)
+
+object Config {
+  implicit val format: YamlFormat[Config] = yamlFormat1(Config.apply)
+}
+final case class Config(groups: Seq[ConfigGroup])

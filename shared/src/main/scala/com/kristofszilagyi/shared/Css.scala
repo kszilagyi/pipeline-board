@@ -1,5 +1,8 @@
 package com.kristofszilagyi.shared
 
+
+import com.kristofszilagyi.shared.pixel.Pixel.RichInt
+
 import scala.concurrent.duration.DurationDouble
 import scala.language.postfixOps
 
@@ -47,6 +50,6 @@ object MyStyles extends StyleSheet.Inline {
 
   val unstable = style(svgFill := pink)
 
-  val labelEndPx = 200
-  val rightMargin = 100
+  val labelEnd = 200.xpx
+  val rightMargin = 100.xpx
 }

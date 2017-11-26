@@ -17,6 +17,7 @@ import io.circe._
 import io.circe.java8.time._
 
 import scala.collection.immutable
+import scala.collection.immutable.ListMap
 
 @JsonCodec final case class ResponseError(s: String)
 
@@ -103,7 +104,19 @@ object JobType extends Enum[JobType] with CirceEnum[JobType] {
 
 @JsonCodec final case class JobDetails(static: Job, maybeDynamic: Option[JobStatus])
 
-@JsonCodec final case class CachedResult(results: Seq[JobDetails])
+@JsonCodec final case class JobGroup(jobs: Seq[JobDetails])
+
+@JsonCodec final case class GroupName(s: String)
+
+object CachedResult {
+  implicit val keyDecoder = new KeyDecoder[GroupName] {
+    def apply(key: String): Option[GroupName] = Some(GroupName(key))
+  }
+  implicit val keyEncoder = new KeyEncoder[GroupName] {
+    def apply(groupName: GroupName): String = groupName.s
+  }
+}
+@JsonCodec final case class CachedResult(groups: ListMap[GroupName, JobGroup])
 
 @JsonCodec final case class ResultAndTime(cachedResult: CachedResult, time: Instant)
 

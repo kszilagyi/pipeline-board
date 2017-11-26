@@ -2,20 +2,18 @@ package com.kristofszilagyi.actors
 
 import akka.typed.scaladsl.Actor
 import akka.typed.{ActorRef, Behavior}
-import com.kristofszilagyi.fetchers.{Fetcher, GitLabCiFetcher, JenkinsFetcher}
-import com.kristofszilagyi.shared.JobType.{GitLabCi, Jenkins}
+import com.kristofszilagyi.fetchers.Fetcher
 import com.kristofszilagyi.shared.TypeSafeEqualsOps._
 import com.kristofszilagyi.shared._
-import play.api.libs.ws.WSClient
 import slogging.LazyLogging
 
-import scala.collection.immutable.ListSet
+import scala.collection.immutable.ListMap
 
 sealed trait ResultCacheIncoming
 final case class FetchCached(parent: ActorRef[CachedResult]) extends ResultCacheIncoming
 final case class OneFetchFinished(result: JobDetails) extends ResultCacheIncoming
 
-class ResultCache(jobs: ListSet[Job], fetchers: Traversable[Fetcher]) extends LazyLogging {
+final class ResultCache(jobGroups: ListMap[GroupName, Seq[Job]], fetchers: Traversable[Fetcher]) extends LazyLogging {
 
   val behaviour: Behavior[ResultCacheIncoming] = {
     Actor.deferred { ctx =>
@@ -34,22 +32,24 @@ class ResultCache(jobs: ListSet[Job], fetchers: Traversable[Fetcher]) extends La
               sender ! cache
               Actor.same
             case newResult: OneFetchFinished =>
-              val matchingJobs = cache.results.filter(_.static ==== newResult.result.static).toList
-              matchingJobs match {
-                case List() =>
-                  logger.error(s"No matching jobs for ${newResult.result.static}")
-                  Actor.stopped
-                case List(jobToUpdate) =>
-                  val newCache = cache.results.updated(cache.results.indexOf(jobToUpdate), newResult.result)
-                  b(CachedResult(newCache))
-                case other =>
-                  logger.error(s"More than one matching jobs for ${newResult.result.static}. matching = $other")
-                  Actor.stopped
-              }
+              val newCache = cache.groups.map {case (name, group) => {
+                name -> JobGroup(group.jobs.map{jobDetails =>
+                  if (jobDetails.static ==== newResult.result.static) {
+                    newResult.result
+                  } else {
+                    jobDetails
+                  }
+                })
+              }}
+              b(CachedResult(newCache))
           }
         }
       }
-      b(CachedResult(jobs.toSeq.map(JobDetails(_, None))))
+
+      val initialCache = jobGroups.map{case (groupName, jobs) =>
+        groupName -> JobGroup(jobs.map(JobDetails(_, None)))
+      }
+      b(CachedResult(initialCache))
     }
   }
 }
