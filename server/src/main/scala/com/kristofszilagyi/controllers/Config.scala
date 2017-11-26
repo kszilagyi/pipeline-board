@@ -68,7 +68,7 @@ final case class GitLabCiConfig(jobs: Seq[GitLabCiJobConfig])
 object ConfigGroup {
   implicit val format: YamlFormat[ConfigGroup] = yamlFormat3(ConfigGroup.apply)
 }
-final case class ConfigGroup(groupName: GroupName, jenkins: JenkinsConfig, gitLabCi: GitLabCiConfig)
+final case class ConfigGroup(groupName: GroupName, jenkins: Option[JenkinsConfig], gitLabCi: Option[GitLabCiConfig])
 
 object Config {
   implicit val format: YamlFormat[Config] = yamlFormat1(Config.apply)

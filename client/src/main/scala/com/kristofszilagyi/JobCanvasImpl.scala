@@ -118,6 +118,21 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
 
     //todo show warning if some of the queries failed
     val unpositionedLabels = ciState.groups.toList.flatMap { case (groupName, group) =>
+      List(
+        ElementWithHeight(
+          <.text(
+            ^.textAnchor := textAnchorEnd,
+            dominantBaseline := dominantBaselineCentral,
+            <.tspan(
+              ^.fill := "black",
+              groupName.s
+            )
+          ).x(labelEnd - generalMargin.xpx / 2)
+           .y(stripHeight.toY / 2)
+          ,
+          stripHeight
+        )
+      ) ++
       group.jobs.map { jobState =>
         val numberOfErrors = jobState.maybeDynamic.map(_.r.getOrElse(Seq.empty).map(_.isLeft).count(_ ==== true)).getOrElse(0)
         val warningMsg = if (numberOfErrors > 0) {
@@ -163,8 +178,15 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
         timestampText = timestampTextY, jobArea, timeZone = ZoneId.systemDefault())
     )
 
-    //todo add links to labels and builds
     val uncoloredStrips = ciState.groups.toList.flatMap { case (name, group) =>
+      List(
+        (color: String) => {
+          ElementWithHeight(
+            <.rect(),
+            stripHeight
+          )
+        }
+      ) ++
       group.jobs.map { jobDetails =>
         (color: String) => {
           val oneStrip = nestAt(

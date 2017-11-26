@@ -46,7 +46,7 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
 
     @SuppressWarnings(Array(Wart.Throw))
     val groupedJobs = ListMap(config.groups.map { group =>
-      val jenkinsJobs = group.jenkins.jobs.map { jobConfig =>
+      val jenkinsJobs = group.jenkins.map(_.jobs).getOrElse(Seq.empty).map { jobConfig =>
         val creds = (jobConfig.user, jobConfig.accessToken) match {
           case (Some(user), Some(token)) => Some(JenkinsCredentials(user, token))
           case (None, None) => None
@@ -58,7 +58,7 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
         )
       }
 
-      val gitLabJobs = group.gitLabCi.jobs.map { jobConfig =>
+      val gitLabJobs = group.gitLabCi.map(_.jobs).getOrElse(Seq.empty).map { jobConfig =>
         val root = jobConfig.url
         val jobPath = URLEncoder.encode(root.u.u.pathParts.map(_.part).mkString("/"), "utf-8")
         val restRoot = root.u.u.copy(pathParts = Seq(PathPart("api"), PathPart("v4"), PathPart("projects")) :+ PathPart(jobPath)) //todo url encode
