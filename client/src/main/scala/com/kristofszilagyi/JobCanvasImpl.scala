@@ -117,6 +117,7 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
     val jobArea = JobArea(jobAreaWidth, s.endTime, drawingAreaDurationIterator.value)
     val topOfVerticalLines = backgroundBaseLine(0)
 
+    val groupNameHeight = stripHeight / 2
     //todo show warning if some of the queries failed
     val unpositionedLabels = ciState.groups.toList.flatMap { case (groupName, group) =>
       List(
@@ -129,9 +130,9 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
               groupName.s
             )
           ).x(labelEnd)
-           .y(stripHeight.toY / 2)
+           .y(groupNameHeight.toY / 2)
           ,
-          stripHeight
+          groupNameHeight
         )
       ) ++
       group.jobs.map { jobState =>
@@ -185,8 +186,8 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
           ElementWithHeight(
             <.rect(^.fill := lineAndGroupNameColor)
              .width(jobAreaWidth + labelEnd.toW)
-             .height(stripHeight),
-            stripHeight
+             .height(groupNameHeight),
+            groupNameHeight
           )
         }
       ) ++
