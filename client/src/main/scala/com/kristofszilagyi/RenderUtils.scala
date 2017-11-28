@@ -6,7 +6,7 @@ import java.time.{Instant, ZoneId}
 import com.kristofszilagyi.shared.BuildStatus.{Aborted, Building, Created, Failed, Pending, Successful, Unstable}
 import com.kristofszilagyi.shared.InstantOps._
 import com.kristofszilagyi.shared.ZonedDateTimeOps._
-import com.kristofszilagyi.shared.{JobDetails, MyStyles, Wart}
+import com.kristofszilagyi.shared._
 import japgolly.scalajs.react.vdom.PackageBase.VdomAttr
 import japgolly.scalajs.react.vdom.svg_<^.{^, _}
 import japgolly.scalajs.react.vdom.{SvgTagOf => _, TagMod => _, _}
@@ -15,7 +15,7 @@ import org.scalajs.dom.svg.{A, G, SVG}
 import slogging.LazyLogging
 import TypeSafeAttributes._
 import com.kristofszilagyi.shared.pixel.Pixel._
-
+import TypeSafeEqualsOps._
 import scala.collection.immutable
 import scala.concurrent.duration.{DurationLong, FiniteDuration}
 import scalacss.ScalaCssReact._
@@ -182,5 +182,67 @@ object RenderUtils extends LazyLogging {
             })
         }
     }
+  }
+
+  sealed abstract class TextAnchor(val s: String)
+  object TextAnchor {
+    final case object Start extends TextAnchor("start")
+    final case object End extends TextAnchor("end")
+  }
+
+  def labels(groups: Seq[(GroupName, JobGroup)], alignment: TextAnchor, stripHeight: HPixel, position: XPixel): ArrangeResult = {
+    //val groupNameHeight = 1.hpx
+    //todo show warning if some of the queries failed
+    val unpositionedLabels = groups.toList.flatMap { case (groupName, group) =>
+      /*List(
+        ElementWithHeight(
+          <.text(
+            ^.textAnchor := textAnchorMiddle,
+            dominantBaseline := dominantBaselineCentral,
+            <.tspan(
+              MyStyles.groupNameStyle,
+              groupName.s
+            )
+          ).x(labelEnd)
+           .y(groupNameHeight.toY / 2)
+          ,
+          groupNameHeight
+        )
+      ) ++*/
+      group.jobs.map { jobState =>
+        val numberOfErrors = jobState.maybeDynamic.map(_.r.getOrElse(Seq.empty).map(_.isLeft).count(_ ==== true)).getOrElse(0)
+        val warningMsg = if (numberOfErrors > 0) {
+          "\u26A0 "
+        } else ""
+
+
+        ElementWithHeight(
+          <.text(
+            ^.textAnchor := alignment.s,
+            dominantBaseline := dominantBaselineCentral,
+            <.tspan(
+              ^.fill := "red",
+              <.title(s"$numberOfErrors build was not shown due to errors. Please check out the JavaScript console for details."),
+              warningMsg,
+            ),
+            a(
+              href := jobState.static.urls.userRoot.u.rawString,
+              target := "_blank",
+              <.tspan(
+                textDecoration := "underline",
+                ^.fill := "black",
+                jobState.static.name.s
+              )
+            )
+          )
+            .x(position)
+            .y(stripHeight.toY / 2)
+          ,
+          stripHeight
+        )
+      }
+    }
+
+    VerticalBoxLayout.arrange(unpositionedLabels)
   }
 }

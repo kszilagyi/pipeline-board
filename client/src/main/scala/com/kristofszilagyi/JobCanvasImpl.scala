@@ -6,7 +6,6 @@ import com.kristofszilagyi.Canvas.queryJobWindowWidth
 import com.kristofszilagyi.RenderUtils._
 import com.kristofszilagyi.shared.InstantOps._
 import com.kristofszilagyi.shared.MyStyles.{labelEnd, rightMargin}
-import com.kristofszilagyi.shared.TypeSafeEqualsOps._
 import com.kristofszilagyi.shared.Wart._
 import com.kristofszilagyi.shared._
 import japgolly.scalajs.react.extra.{EventListener, OnUnmount}
@@ -24,7 +23,6 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration.Infinite
 import scala.concurrent.duration.{DurationDouble, DurationInt, FiniteDuration}
 import scala.scalajs.js
-import scalacss.ScalaCssReact._
 
 final case class State(windowWidth: WPixel, ciState: ResultAndTime, drawingAreaDurationIterator: BidirectionalIterator[FiniteDuration],
                        endTime: Instant, mouseDownY: Option[Int], endTimeAtMouseDown: Instant, followTime: Boolean)
@@ -116,59 +114,8 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
     val jobArea = JobArea(jobAreaWidth, s.endTime, drawingAreaDurationIterator.value)
     val topOfVerticalLines = backgroundBaseLine(0)
 
-    val groupNameHeight = stripHeight / 2
-    //todo show warning if some of the queries failed
-    val unpositionedLabels = ciState.groups.toList.flatMap { case (groupName, group) =>
-      List(
-        ElementWithHeight(
-          <.text(
-            ^.textAnchor := textAnchorMiddle,
-            dominantBaseline := dominantBaselineCentral,
-            <.tspan(
-              MyStyles.groupNameStyle,
-              groupName.s
-            )
-          ).x(labelEnd)
-           .y(groupNameHeight.toY / 2)
-          ,
-          groupNameHeight
-        )
-      ) ++
-      group.jobs.map { jobState =>
-        val numberOfErrors = jobState.maybeDynamic.map(_.r.getOrElse(Seq.empty).map(_.isLeft).count(_ ==== true)).getOrElse(0)
-        val warningMsg = if (numberOfErrors > 0) {
-          "\u26A0 "
-        } else ""
-
-
-        ElementWithHeight(
-          <.text(
-            ^.textAnchor := textAnchorEnd,
-            dominantBaseline := dominantBaselineCentral,
-            <.tspan(
-              ^.fill := "red",
-              <.title(s"$numberOfErrors build was not shown due to errors. Please check out the JavaScript console for details."),
-              warningMsg,
-            ),
-            a(
-              href := jobState.static.urls.userRoot.u.rawString,
-              target := "_blank",
-              <.tspan(
-                textDecoration := "underline",
-                ^.fill := "black",
-                jobState.static.name.s
-              )
-            )
-          )
-          .x(labelEnd - generalMargin.xpx / 2)
-          .y(stripHeight.toY / 2)
-          ,
-          stripHeight
-        )
-      }
-    }
-
-    val ArrangeResult(labels, fullHeight) = VerticalBoxLayout.arrange(unpositionedLabels)
+    val ArrangeResult(leftLabels, fullHeight) = RenderUtils.labels(ciState.groups, TextAnchor.End, stripHeight, labelEnd - generalMargin.xpx / 2)
+    val ArrangeResult(rightLabels, _) = RenderUtils.labels(ciState.groups, TextAnchor.Start, stripHeight, windowWidth.toX - rightMargin + generalMargin.xpx / 2)
 
     val bottomOfVerticalLines = backgroundBaseLine(0) + fullHeight.toY + generalMargin.ypx
     val timestampTextY = bottomOfVerticalLines + generalMargin.ypx
@@ -180,7 +127,7 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
     )
 
     val uncoloredStrips = ciState.groups.toList.flatMap { case (name, group) =>
-      List(
+      /*List(
         (color: String) => {
           ElementWithHeight(
             <.rect(^.fill := lineAndGroupNameColor)
@@ -189,7 +136,7 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
             groupNameHeight
           )
         }
-      ) ++
+      ) ++*/
       group.jobs.map { jobDetails =>
         (color: String) => {
           val oneStrip = nestAt(
@@ -246,7 +193,7 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
      .y(backgroundBaseLine(-1))(anythingPos)
     val offsetOnPageY = 50.ypx
     val svgParams = List(
-      moveTo(y = offsetOnPageY, elements = List(groupedDrawObjs, verticleLines, periodText) ++ labels :+ input),
+      moveTo(y = offsetOnPageY, elements = List(groupedDrawObjs, verticleLines, periodText) ++ leftLabels ++ rightLabels :+ input),
     )
 
     <.svg(

@@ -55,6 +55,6 @@ object MyStyles extends StyleSheet.Inline {
     Attrs.fontWeight.bold
   )
 
-  val labelEnd = 200.xpx
-  val rightMargin = 100.xpx
+  val labelEnd = 200.xpx //basically left margin
+  val rightMargin = 200.xpx
 }
