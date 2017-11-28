@@ -24,6 +24,7 @@ import scalacss.ScalaCssReact._
 object RenderUtils extends LazyLogging {
 
   def alignmentBaseline: VdomAttr[Any] = VdomAttr("alignmentBaseline")
+
   def dominantBaseline: VdomAttr[Any] = VdomAttr("dominantBaseline")
 
   def className: VdomAttr[Any] = VdomAttr("className")
@@ -49,8 +50,10 @@ object RenderUtils extends LazyLogging {
 
   final case class JobArea(width: WPixel, endTime: Instant, drawingAreaDuration: FiniteDuration) {
     def startTime: Instant = endTime - drawingAreaDuration
+
     def length: FiniteDuration = endTime - startTime
   }
+
   @SuppressWarnings(Array(Wart.DefaultArguments))
   def nestAt(x: XPixel = 0.xpx, y: YPixel = 0.ypx, elements: Seq[TagMod]): TagOf[SVG] = {
     <.svg(elements: _*).x(x).y(y)
@@ -82,14 +85,14 @@ object RenderUtils extends LazyLogging {
           ^.strokeWidth := "1",
           ^.stroke := lineAndGroupNameColor
         ).x1(x)
-         .y1(yStart)
-         .x2(x)
-         .y2(yEnd),
+          .y1(yStart)
+          .x2(x)
+          .y2(yEnd),
         <.text(
           ^.textAnchor := "middle",
           timeOnBar.format(DateTimeFormatter.ofPattern("uuuu-MMM-dd HH:mm"))
         ).x(x)
-         .y(timestampText)
+          .y(timestampText)
       )
     }
   }
@@ -99,13 +102,13 @@ object RenderUtils extends LazyLogging {
     val background = <.rect(
       ^.fill := color,
     ).height(stripHeight)
-     .width(jobAreaWidth)
+      .width(jobAreaWidth)
     <.svg(
       List(
         background
       ) ++ elementsInside: _*
     ).height(stripHeight)
-     .width(jobAreaWidth)
+      .width(jobAreaWidth)
   }
 
   def jobRectanges(jobState: JobDetails, jobArea: JobArea, rectangleHeight: HPixel, stripHeight: HPixel): Seq[TagOf[SVGElement]] = {
@@ -115,7 +118,7 @@ object RenderUtils extends LazyLogging {
           ^.fill := "red",
           alignmentBaseline := alignmentBaselineMiddle,
           "No data yet"
-        ).y(stripHeight.toY/2),
+        ).y(stripHeight.toY / 2),
         )
       case Some(dynamic) =>
         dynamic.r match {
@@ -124,7 +127,7 @@ object RenderUtils extends LazyLogging {
               ^.fill := "red",
               alignmentBaseline := alignmentBaselineMiddle,
               err.s
-            ).y(stripHeight.toY/2))
+            ).y(stripHeight.toY / 2))
           case Right(runs) =>
             runs.flatMap(either => either match {
               case Right(build) =>
@@ -185,40 +188,26 @@ object RenderUtils extends LazyLogging {
   }
 
   sealed abstract class TextAnchor(val s: String)
+
   object TextAnchor {
+
     final case object Start extends TextAnchor("start")
+
     final case object End extends TextAnchor("end")
+
   }
 
-  def labels(groups: Seq[(GroupName, JobGroup)], alignment: TextAnchor, stripHeight: HPixel, position: XPixel): ArrangeResult = {
-    //val groupNameHeight = 1.hpx
-    //todo show warning if some of the queries failed
+  def labels(groups: Seq[(GroupName, JobGroup)], anchor: TextAnchor, stripHeight: HPixel, position: XPixel): ArrangeResult = {
     val unpositionedLabels = groups.toList.flatMap { case (groupName, group) =>
-      /*List(
-        ElementWithHeight(
-          <.text(
-            ^.textAnchor := textAnchorMiddle,
-            dominantBaseline := dominantBaselineCentral,
-            <.tspan(
-              MyStyles.groupNameStyle,
-              groupName.s
-            )
-          ).x(labelEnd)
-           .y(groupNameHeight.toY / 2)
-          ,
-          groupNameHeight
-        )
-      ) ++*/
-      group.jobs.map { jobState =>
+      group.jobs.zipWithIndex.map { case (jobState, idxWithinGroup) =>
         val numberOfErrors = jobState.maybeDynamic.map(_.r.getOrElse(Seq.empty).map(_.isLeft).count(_ ==== true)).getOrElse(0)
         val warningMsg = if (numberOfErrors > 0) {
           "\u26A0 "
         } else ""
 
-
         ElementWithHeight(
           <.text(
-            ^.textAnchor := alignment.s,
+            ^.textAnchor := anchor.s,
             dominantBaseline := dominantBaselineCentral,
             <.tspan(
               ^.fill := "red",
@@ -233,13 +222,36 @@ object RenderUtils extends LazyLogging {
                 ^.fill := "black",
                 jobState.static.name.s
               )
+            ),
+          )
+            .x(position)
+            .y(stripHeight.toY / 2),
+          stripHeight
+        )
+      }
+    }
+
+    VerticalBoxLayout.arrange(unpositionedLabels)
+  }
+
+  def groupNameLabels(groups: Seq[(GroupName, JobGroup)], anchor: TextAnchor, stripHeight: HPixel, position: XPixel): ArrangeResult = {
+    val unpositionedLabels = groups.toList.flatMap { case (groupName, group) =>
+      group.jobs.zipWithIndex.map { case (jobState, idxWithinGroup) =>
+
+        ElementWithHeight(
+          <.text(
+            ^.textAnchor := anchor.s,
+            dominantBaseline := dominantBaselineCentral,
+
+            <.tspan(
+              ^.fill := "black",
+              if (idxWithinGroup ==== 0) groupName.s
+              else ""
             )
           )
             .x(position)
-            .y(stripHeight.toY / 2)
-          ,
-          stripHeight
-        )
+            .y(stripHeight.toY / 2),
+        stripHeight)
       }
     }
 

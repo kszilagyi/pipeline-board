@@ -114,8 +114,13 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
     val jobArea = JobArea(jobAreaWidth, s.endTime, drawingAreaDurationIterator.value)
     val topOfVerticalLines = backgroundBaseLine(0)
 
-    val ArrangeResult(leftLabels, fullHeight) = RenderUtils.labels(ciState.groups, TextAnchor.End, stripHeight, labelEnd - generalMargin.xpx / 2)
-    val ArrangeResult(rightLabels, _) = RenderUtils.labels(ciState.groups, TextAnchor.Start, stripHeight, windowWidth.toX - rightMargin + generalMargin.xpx / 2)
+    val ArrangeResult(leftLabels, fullHeight) = RenderUtils.labels(ciState.groups, TextAnchor.End, stripHeight,
+      labelEnd - generalMargin.xpx / 2)
+    val ArrangeResult(rightLabels, _) = RenderUtils.labels(ciState.groups, TextAnchor.Start, stripHeight,
+      windowWidth.toX - rightMargin + generalMargin.xpx / 2)
+
+    val ArrangeResult(groupNameLabels, _) = RenderUtils.groupNameLabels(ciState.groups, TextAnchor.End, stripHeight,
+      windowWidth.toX - generalMargin.xpx)
 
     val bottomOfVerticalLines = backgroundBaseLine(0) + fullHeight.toY + generalMargin.ypx
     val timestampTextY = bottomOfVerticalLines + generalMargin.ypx
@@ -193,7 +198,7 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
      .y(backgroundBaseLine(-1))(anythingPos)
     val offsetOnPageY = 50.ypx
     val svgParams = List(
-      moveTo(y = offsetOnPageY, elements = List(groupedDrawObjs, verticleLines, periodText) ++ leftLabels ++ rightLabels :+ input),
+      moveTo(y = offsetOnPageY, elements = List(groupedDrawObjs, verticleLines, periodText) ++ leftLabels ++ rightLabels ++ groupNameLabels :+ input),
     )
 
     <.svg(

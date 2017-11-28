@@ -56,5 +56,5 @@ object MyStyles extends StyleSheet.Inline {
   )
 
   val labelEnd = 200.xpx //basically left margin
-  val rightMargin = 200.xpx
+  val rightMargin = 400.xpx
 }
