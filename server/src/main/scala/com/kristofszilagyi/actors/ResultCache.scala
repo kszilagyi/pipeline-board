@@ -14,7 +14,6 @@ final case class FetchCached(parent: ActorRef[CachedResult]) extends ResultCache
 final case class OneFetchFinished(result: JobDetails) extends ResultCacheIncoming
 
 final class ResultCache(jobGroups: ListMap[GroupName, Seq[Job]], fetchers: Traversable[Fetcher]) extends LazyLogging {
-
   val behaviour: Behavior[ResultCacheIncoming] = {
     Actor.deferred { ctx =>
       fetchers.foreach{ fetcher =>
@@ -49,7 +48,7 @@ final class ResultCache(jobGroups: ListMap[GroupName, Seq[Job]], fetchers: Trave
       val initialCache = jobGroups.map{case (groupName, jobs) =>
         groupName -> JobGroup(jobs.map(JobDetails(_, None)))
       }
-      b(CachedResult(initialCache))
+      b(CachedResult(initialCache.toSeq))
     }
   }
 }

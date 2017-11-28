@@ -9,7 +9,6 @@ import com.netaporter.uri.Uri
 import japgolly.scalajs.react.test.ReactTestUtils
 import utest._
 
-import scala.collection.immutable.ListMap
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 import scala.scalajs.js.timers.SetIntervalHandle
@@ -43,7 +42,7 @@ final class MockAutowire extends MockableAutowire {
     Future.successful(
       ResultAndTime(
         CachedResult(
-          ListMap(
+          Seq(
             GroupName("name") ->
             JobGroup(
               List(

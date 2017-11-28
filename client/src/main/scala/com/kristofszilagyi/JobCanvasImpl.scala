@@ -20,7 +20,6 @@ import slogging.LazyLogging
 import TypeSafeAttributes._
 import com.kristofszilagyi.shared.pixel.Pixel._
 
-import scala.collection.immutable.ListMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration.Infinite
 import scala.concurrent.duration.{DurationDouble, DurationInt, FiniteDuration}
@@ -300,7 +299,7 @@ object Canvas {
       14.days, 21.days, 30.days, 45.days, 60.days, 90.days, 120.days, 180.days, 270.days, 365.days).sorted
 
     ScalaComponent.builder[Unit]("Timer")
-      .initialState(State(queryJobWindowWidth(), ResultAndTime(CachedResult(ListMap.empty), Instant.now),
+      .initialState(State(queryJobWindowWidth(), ResultAndTime(CachedResult(Seq.empty), Instant.now),
         drawingAreaDurationIterator = BidirectionalIterator(validDurations, 9), //:(
         Instant.now(), mouseDownY = None, endTimeAtMouseDown = Instant.now, followTime = true))
       .backend(new JobCanvasImpl(_, timers, autowire))

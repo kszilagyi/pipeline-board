@@ -17,7 +17,6 @@ import io.circe._
 import io.circe.java8.time._
 
 import scala.collection.immutable
-import scala.collection.immutable.ListMap
 
 @JsonCodec final case class ResponseError(s: String)
 
@@ -116,7 +115,7 @@ object CachedResult {
     def apply(groupName: GroupName): String = groupName.s
   }
 }
-@JsonCodec final case class CachedResult(groups: ListMap[GroupName, JobGroup])
+@JsonCodec final case class CachedResult(groups: Seq[(GroupName, JobGroup)])
 
 @JsonCodec final case class ResultAndTime(cachedResult: CachedResult, time: Instant)
 
