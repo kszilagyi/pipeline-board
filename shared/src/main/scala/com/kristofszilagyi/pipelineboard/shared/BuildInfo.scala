@@ -1,0 +1,13 @@
+package com.kristofszilagyi.pipelineboard.shared
+
+import java.time.Instant
+
+import io.circe.generic.JsonCodec
+import io.circe.java8.time._
+
+@JsonCodec final case class BuildNumber(i: Int)
+
+@JsonCodec final case class BuildInfo(buildStatus: BuildStatus,
+                                      buildStart: Instant,
+                                      maybeBuildFinish: Option[Instant],
+                                      buildNumber: BuildNumber)

@@ -1,6 +1,5 @@
 package com.kristofszilagyi.pipelineboard
 
-import com.kristofszilagyi.BidirectionalIterator
 import utest._
 
 object BidirectionalIteratorTest extends TestSuite {
