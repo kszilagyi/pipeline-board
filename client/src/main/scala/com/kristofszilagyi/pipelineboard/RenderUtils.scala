@@ -257,4 +257,23 @@ object RenderUtils extends LazyLogging {
 
     VerticalBoxLayout.arrange(unpositionedLabels).elements
   }
+
+  def groupBackgrounds(groups: Seq[(GroupName, JobGroup)], left: XPixel, right: XPixel, stripHeight: HPixel): Seq[TagOf[SVGElement]] = {
+    val colors = List("lightblue", "#4fabc9")
+    val rectanges = groups.zipWithIndex.map { case ((groupName, group), idx) =>
+      ElementWithHeight(
+        <.rect(
+          ^.fill := colors(idx % colors.size),
+          <.title(groupName.s)
+        )
+          .x(left)
+          .width((right - left).toW)
+          .height(stripHeight * group.jobs.size),
+        stripHeight * group.jobs.size
+      )
+    }
+
+    VerticalBoxLayout.arrange(rectanges).elements
+
+  }
 }

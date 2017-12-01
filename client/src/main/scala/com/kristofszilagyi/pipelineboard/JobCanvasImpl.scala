@@ -18,6 +18,8 @@ import org.scalajs.dom.raw.SVGElement
 import slogging.LazyLogging
 import TypeSafeAttributes._
 import com.kristofszilagyi.pipelineboard.shared.pixel.Pixel._
+import NonEmptyListOps._
+import cats.data.NonEmptyList
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration.Infinite
@@ -105,7 +107,8 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
     import s.drawingAreaDurationIterator
 
     def backgroundBaseLine(idx: Int) = stripHeight.toY * idx
-    val colors = List("black", "darkslategrey")
+
+    val colors = NonEmptyList.of("black", "darkslategrey")
 
     val ciState = s.ciState.cachedResult
     //todo handle if jobs are not fecthed yet
@@ -121,6 +124,9 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
 
     val groupNameLabels = RenderUtils.groupNameLabels(ciState.groups, TextAnchor.End, stripHeight,
       windowWidth.toX - generalMargin.xpx)
+
+    val leftGroupColors = RenderUtils.groupBackgrounds(ciState.groups, 0.xpx, labelEnd, stripHeight)
+    val rightGroupColors = RenderUtils.groupBackgrounds(ciState.groups, windowWidth.toX - rightMargin, windowWidth.toX, stripHeight)
 
     val bottomOfVerticalLines = backgroundBaseLine(0) + fullHeight.toY + generalMargin.ypx
     val timestampTextY = bottomOfVerticalLines + generalMargin.ypx
@@ -151,7 +157,7 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
       }
     }
     val unpositionedStrips = uncoloredStrips.zipWithIndex.map { case (uncolored, idx) =>
-      uncolored(colors(idx % colors.size))
+      uncolored(colors.choose(idx))
     }
 
     val ArrangeResult(strips, _) = VerticalBoxLayout.arrange(unpositionedStrips)
@@ -187,7 +193,8 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
      .y(backgroundBaseLine(-1))(anythingPos)
     val offsetOnPageY = 50.ypx
     val svgParams = List(
-      moveTo(y = offsetOnPageY, elements = List(groupedDrawObjs, verticleLines, periodText) ++ leftLabels ++ rightLabels ++ groupNameLabels :+ input),
+      moveTo(y = offsetOnPageY, elements = List(groupedDrawObjs, verticleLines, periodText) ++
+         leftGroupColors ++ rightGroupColors ++ leftLabels ++ rightLabels ++ groupNameLabels  :+ input)
     )
 
     <.svg(
