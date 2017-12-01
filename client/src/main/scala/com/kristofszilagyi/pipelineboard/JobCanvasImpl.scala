@@ -132,16 +132,6 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
     )
 
     val uncoloredStrips = ciState.groups.toList.flatMap { case (name, group) =>
-      /*List(
-        (color: String) => {
-          ElementWithHeight(
-            <.rect(^.fill := lineAndGroupNameColor)
-             .width(jobAreaWidth + labelEnd.toW)
-             .height(groupNameHeight),
-            groupNameHeight
-          )
-        }
-      ) ++*/
       group.jobs.map { jobDetails =>
         (color: String) => {
           val oneStrip = nestAt(
@@ -166,7 +156,6 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
 
     val ArrangeResult(strips, _) = VerticalBoxLayout.arrange(unpositionedStrips)
 
-    //colors(idx % colors.size)
     val periodText = <.text(s"${s.drawingAreaDurationIterator.value}", ^.textAnchor := textAnchorEnd, dominantBaseline := "text-before-edge")
       .x(labelEnd + jobAreaWidth.toX)
       .y(backgroundBaseLine(-1))
