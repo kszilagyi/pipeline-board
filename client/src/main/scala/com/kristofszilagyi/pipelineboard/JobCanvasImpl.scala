@@ -119,7 +119,7 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
     val ArrangeResult(rightLabels, _) = RenderUtils.labels(ciState.groups, TextAnchor.Start, stripHeight,
       windowWidth.toX - rightMargin + generalMargin.xpx / 2)
 
-    val ArrangeResult(groupNameLabels, _) = RenderUtils.groupNameLabels(ciState.groups, TextAnchor.End, stripHeight,
+    val groupNameLabels = RenderUtils.groupNameLabels(ciState.groups, TextAnchor.End, stripHeight,
       windowWidth.toX - generalMargin.xpx)
 
     val bottomOfVerticalLines = backgroundBaseLine(0) + fullHeight.toY + generalMargin.ypx

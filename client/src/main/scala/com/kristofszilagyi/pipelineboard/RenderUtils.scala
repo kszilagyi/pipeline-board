@@ -234,7 +234,7 @@ object RenderUtils extends LazyLogging {
     VerticalBoxLayout.arrange(unpositionedLabels)
   }
 
-  def groupNameLabels(groups: Seq[(GroupName, JobGroup)], anchor: TextAnchor, stripHeight: HPixel, position: XPixel): ArrangeResult = {
+  def groupNameLabels(groups: Seq[(GroupName, JobGroup)], anchor: TextAnchor, stripHeight: HPixel, position: XPixel): Seq[TagOf[SVGElement]] = {
     val unpositionedLabels = groups.toList.flatMap { case (groupName, group) =>
       group.jobs.zipWithIndex.map { case (jobState, idxWithinGroup) =>
 
@@ -255,6 +255,6 @@ object RenderUtils extends LazyLogging {
       }
     }
 
-    VerticalBoxLayout.arrange(unpositionedLabels)
+    VerticalBoxLayout.arrange(unpositionedLabels).elements
   }
 }
