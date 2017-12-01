@@ -16,6 +16,9 @@ import slogging.LazyLogging
 import TypeSafeAttributes._
 import com.kristofszilagyi.pipelineboard.shared.pixel.Pixel._
 import TypeSafeEqualsOps._
+import cats.data.NonEmptyList
+import com.kristofszilagyi.pipelineboard.shared.NonEmptyListOps.RichNonEmptyList
+
 import scala.collection.immutable
 import scala.concurrent.duration.{DurationLong, FiniteDuration}
 import scalacss.ScalaCssReact._
@@ -259,11 +262,11 @@ object RenderUtils extends LazyLogging {
   }
 
   def groupBackgrounds(groups: Seq[(GroupName, JobGroup)], left: XPixel, right: XPixel, stripHeight: HPixel): Seq[TagOf[SVGElement]] = {
-    val colors = List("lightblue", "#4fabc9")
+    val colors = NonEmptyList.of("lightblue", "#4fabc9")
     val rectanges = groups.zipWithIndex.map { case ((groupName, group), idx) =>
       ElementWithHeight(
         <.rect(
-          ^.fill := colors(idx % colors.size),
+          ^.fill := colors.choose(idx),
           <.title(groupName.s)
         )
           .x(left)
