@@ -129,7 +129,7 @@ object RenderUtils extends LazyLogging {
             List(<.text(
               ^.fill := "red",
               alignmentBaseline := alignmentBaselineMiddle,
-              err.s
+              err.s.replaceAll("\n", " ")
             ).y(stripHeight.toY / 2))
           case Right(runs) =>
             runs.flatMap(either => either match {
