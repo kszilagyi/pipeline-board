@@ -121,7 +121,7 @@ object RenderUtils extends LazyLogging {
           ^.fill := "red",
           alignmentBaseline := alignmentBaselineMiddle,
           "No data yet"
-        ).y(stripHeight.toY / 2),
+        ).y(stripHeight.toY / 2)
         )
       case Some(dynamic) =>
         dynamic.r match {
@@ -129,8 +129,9 @@ object RenderUtils extends LazyLogging {
             List(<.text(
               ^.fill := "red",
               alignmentBaseline := alignmentBaselineMiddle,
-              err.s.replaceAll("\n", " ")
-            ).y(stripHeight.toY / 2))
+              err.s.replaceAll("\n", " "),
+              <.title(err.s)
+            ).y(stripHeight.toY / 2), <.title(err.s))
           case Right(runs) =>
             runs.flatMap(either => either match {
               case Right(build) =>
