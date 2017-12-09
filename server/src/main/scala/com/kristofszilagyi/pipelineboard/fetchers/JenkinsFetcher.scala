@@ -53,6 +53,7 @@ object JenkinsFetcher {
   final case class JobsInfoWithoutBuildInfo(replyTo: ActorRef[FetcherResult],
                                                     results: Seq[Either[JobDetails, JenkinsFetcher.JobInfoWithoutBuildInfo]]) extends JenkinsFetcherIncoming
 
+  //todo move out from here
   final case class Fetch(replyTo: ActorRef[FetcherResult]) extends JenkinsFetcherIncoming
 
 

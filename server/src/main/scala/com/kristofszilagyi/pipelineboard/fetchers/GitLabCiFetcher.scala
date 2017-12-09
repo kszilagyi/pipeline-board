@@ -94,7 +94,7 @@ object GitLabCiFetcher {
 
   private def extractNextPageLink(requestUrl: RawUrl, result: WSRequest#Response): Either[ResponseError, Option[RawUrl]] = {
     if (result.status !=== 200) {
-      Left(ResponseError(s"Invalid status code while paging (${result.status}"))
+      Left(ResponseError(s"Invalid status code while paging (${result.status})"))
     } else {
       val maybeLinkHeaderString = result.header("Link") match {
         case Some(linkHeader) => Right(linkHeader)

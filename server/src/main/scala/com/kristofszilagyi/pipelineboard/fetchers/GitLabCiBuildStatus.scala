@@ -12,7 +12,7 @@ sealed trait GitLabCiBuildStatus extends EnumEntry {
 sealed trait DisplayableGitLabCiStatus extends GitLabCiBuildStatus {
   def toBuildStatus: BuildStatus
 }
-//created, pending, running, failed, success, canceled, skipped, manual
+
 object GitLabCiBuildStatus extends Enum[GitLabCiBuildStatus] with TolerantCirceEnum[GitLabCiBuildStatus] {
   val values: immutable.IndexedSeq[GitLabCiBuildStatus] = findValues
 

@@ -64,11 +64,20 @@ object GitLabCiConfig {
 }
 final case class GitLabCiConfig(jobs: Seq[GitLabCiJobConfig])
 
+object TeamCityJobConfig {
+  implicit val format: YamlFormat[TeamCityJobConfig] = yamlFormat2(TeamCityJobConfig.apply)
+}
+final case class TeamCityJobConfig(name: JobDisplayName, url: UserRoot)
+
+object TeamCityConfig {
+  implicit val format: YamlFormat[TeamCityConfig] = yamlFormat1(TeamCityConfig.apply)
+}
+final case class TeamCityConfig(jobs: Seq[TeamCityJobConfig])
 
 object ConfigGroup {
-  implicit val format: YamlFormat[ConfigGroup] = yamlFormat3(ConfigGroup.apply)
+  implicit val format: YamlFormat[ConfigGroup] = yamlFormat4(ConfigGroup.apply)
 }
-final case class ConfigGroup(groupName: GroupName, jenkins: Option[JenkinsConfig], gitLabCi: Option[GitLabCiConfig])
+final case class ConfigGroup(groupName: GroupName, jenkins: Option[JenkinsConfig], gitLabCi: Option[GitLabCiConfig], teamCityConfig: Option[TeamCityConfig])
 
 object Config {
   implicit val format: YamlFormat[Config] = yamlFormat1(Config.apply)
