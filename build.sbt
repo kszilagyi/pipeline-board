@@ -184,7 +184,7 @@ lazy val ReleaseCmd = Command.command("release") {
       state
 }
 
-// lazy val root = (project in file(".")).aggregate(client, server)
+lazy val root = (project in file(".")).aggregate(client, server, sharedJVM, sharedJS)
 
-// loads the Play server project at sbt startup
-onLoad in Global := (Command.process("project server", _: State)) compose (onLoad in Global).value
+// loads the root project at sbt startup
+onLoad in Global := (Command.process("project root", _: State)) compose (onLoad in Global).value

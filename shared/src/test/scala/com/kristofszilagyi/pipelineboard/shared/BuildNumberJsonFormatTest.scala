@@ -7,15 +7,15 @@ import io.circe.syntax._
 import io.circe.parser.decode
 
 
-class BuildNumberJsonFormatTest extends TestSuite {
+object BuildNumberJsonFormatTest extends TestSuite {
 
   def tests: Tree[Test] = this {
     'encode {
-      BuildNumber(2).asJson ==> JsonNumber.fromIntegralStringUnsafe("2")
+      BuildNumber(2).asJson.asNumber ==> Some(JsonNumber.fromIntegralStringUnsafe("2"))
     }
 
     'decode {
-      decode[BuildNumber]("2") ==> BuildNumber(2)
+      decode[BuildNumber]("2") ==> Right(BuildNumber(2))
     }
   }
 }
