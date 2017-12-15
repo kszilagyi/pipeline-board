@@ -8,7 +8,7 @@ import com.kristofszilagyi.pipelineboard.fetchers._
 import com.kristofszilagyi.pipelineboard.shared.CssSettings.settings._
 import com.kristofszilagyi.pipelineboard.shared.JobType.{GitLabCi, Jenkins, TeamCity}
 import com.kristofszilagyi.pipelineboard.shared._
-import com.netaporter.uri.{PathPart, Uri}
+import com.netaporter.uri.{EmptyQueryString, PathPart}
 import net.jcazevedo.moultingyaml.PimpedString
 import play.api.Configuration
 import play.api.libs.ws.WSClient
@@ -72,7 +72,8 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
       val teamCityJobs = group.teamCity.map(_.jobs).getOrElse(Seq.empty).map { jobConfig =>
         val userRoot = jobConfig.url
         val jobId = userRoot.u.u.query.param("buildTypeId").get
-        val restRoot = userRoot.u.u.copy(pathParts = Seq("guestAuth", "app", "rest", "buildTypes", jobId).map(PathPart.apply))
+        val restRoot = userRoot.u.u.copy(pathParts = Seq("guestAuth", "app", "rest", "buildTypes", jobId).map(PathPart.apply),
+          query = EmptyQueryString)
         TeamCityJob(
           Job(jobConfig.name, Urls(userRoot = userRoot, restRoot = RestRoot(RawUrl(restRoot))), TeamCity)
         )

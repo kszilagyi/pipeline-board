@@ -35,7 +35,8 @@ final class TeamCityFetcher(ws: WSClient, jobToFetch: TeamCityJob)(implicit ec: 
   //https://teamcity.jetbrains.com/app/rest/buildTypes/ApacheAnt_BuildAntUsingMave/builds?fields=build(id,number,startDate,finishDate)
   def behaviour: Behavior[JenkinsFetcher.Fetch] = Actor.immutable[Fetch] { case (ctx, msg) =>
     val url = jobToFetch.common.jobInfo
-    ws.url(url.rawString).get.map { result =>
+    val acceptHeader = "Accept" -> "application/json"
+    ws.url(url.rawString).withHttpHeaders(acceptHeader).get.map { result =>
       safeRead[TCPartialBuildsInfo](jobToFetch.common.jobInfo, result)
     }.lift.onComplete { maybeBuilds =>
       val flattenedResults = maybeBuilds match {
