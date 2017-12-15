@@ -77,7 +77,7 @@ final case class TeamCityConfig(jobs: Seq[TeamCityJobConfig])
 object ConfigGroup {
   implicit val format: YamlFormat[ConfigGroup] = yamlFormat4(ConfigGroup.apply)
 }
-final case class ConfigGroup(groupName: GroupName, jenkins: Option[JenkinsConfig], gitLabCi: Option[GitLabCiConfig], teamCityConfig: Option[TeamCityConfig])
+final case class ConfigGroup(groupName: GroupName, jenkins: Option[JenkinsConfig], gitLabCi: Option[GitLabCiConfig], teamCity: Option[TeamCityConfig])
 
 object Config {
   implicit val format: YamlFormat[Config] = yamlFormat1(Config.apply)

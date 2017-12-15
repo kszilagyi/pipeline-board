@@ -6,7 +6,7 @@ import javax.inject._
 import com.kristofszilagyi.pipelineboard.actors.ResultCache
 import com.kristofszilagyi.pipelineboard.fetchers._
 import com.kristofszilagyi.pipelineboard.shared.CssSettings.settings._
-import com.kristofszilagyi.pipelineboard.shared.JobType.{GitLabCi, Jenkins}
+import com.kristofszilagyi.pipelineboard.shared.JobType.{GitLabCi, Jenkins, TeamCity}
 import com.kristofszilagyi.pipelineboard.shared._
 import com.netaporter.uri.{PathPart, Uri}
 import net.jcazevedo.moultingyaml.PimpedString
@@ -37,6 +37,7 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
 
   @SuppressWarnings(Array(Wart.OptionPartial))
   private val autowireServer = {
+    val utf8 = "utf-8"
     //todo fix for other OS
     //todo rename with project rename
     val home = System.getenv("HOME")
@@ -59,28 +60,39 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
       }
 
       val gitLabJobs = group.gitLabCi.map(_.jobs).getOrElse(Seq.empty).map { jobConfig =>
-        val root = jobConfig.url
-        val jobPath = URLEncoder.encode(root.u.u.pathParts.map(_.part).mkString("/"), "utf-8")
-        val restRoot = root.u.u.copy(pathParts = Seq(PathPart("api"), PathPart("v4"), PathPart("projects")) :+ PathPart(jobPath)) //todo url encode
+        val userRoot = jobConfig.url
+        val jobPath = URLEncoder.encode(userRoot.u.u.pathParts.map(_.part).mkString("/"), utf8)
+        val restRoot = userRoot.u.u.copy(pathParts = Seq(PathPart("api"), PathPart("v4"), PathPart("projects")) :+ PathPart(jobPath)) //todo url encode
         GitLabCiJob(
-          Job(jobConfig.name, Urls(userRoot = root, restRoot = RestRoot(RawUrl(restRoot))), GitLabCi),
+          Job(jobConfig.name, Urls(userRoot = userRoot, restRoot = RestRoot(RawUrl(restRoot))), GitLabCi),
           jobConfig.accessToken, jobConfig.jobNameOnGitLab
         )
       }
-      (group.groupName, (jenkinsJobs, gitLabJobs))
+
+      val teamCityJobs = group.teamCity.map(_.jobs).getOrElse(Seq.empty).map { jobConfig =>
+        val userRoot = jobConfig.url
+        val jobId = userRoot.u.u.query.param("buildTypeId").get
+        val restRoot = userRoot.u.u.copy(pathParts = Seq("guestAuth", "app", "rest", "buildTypes", jobId).map(PathPart.apply))
+        TeamCityJob(
+          Job(jobConfig.name, Urls(userRoot = userRoot, restRoot = RestRoot(RawUrl(restRoot))), TeamCity)
+        )
+      }
+      (group.groupName, (jenkinsJobs, gitLabJobs, teamCityJobs))
     }: _*)
 
     val jenkinsJobs = groupedJobs.toList.flatMap(_._2._1)
     val gitLabJobs = groupedJobs.toList.flatMap(_._2._2)
+    val teamCityJobs = groupedJobs.toList.flatMap(_._2._3)
     val fetchers =
-      jenkinsJobs.map(new JenkinsFetcher(wsClient, _)) ++ gitLabJobs.map(new GitLabCiFetcher(wsClient, _))
+      jenkinsJobs.map(new JenkinsFetcher(wsClient, _)) ++ gitLabJobs.map(new GitLabCiFetcher(wsClient, _)) ++
+        teamCityJobs.map(new TeamCityFetcher(wsClient, _))
 
     val jobs = jenkinsJobs.map(_.common) ++ gitLabJobs.map(_.common)
     val jobSet = ListSet(jobs: _*)
     assert(jobs.size ==== jobSet.size, "Jobs are not unique")
     assert(jobs.map(_.name).toSet.size ==== jobs.map(_.name).size, "Jobs names are not unique")
-    val jobsForCache = groupedJobs.map{case (name, (jenkins, gitlab)) =>
-        name -> (jenkins.map(_.common) ++ gitlab.map(_.common))
+    val jobsForCache = groupedJobs.map{case (name, (jenkins, gitlab, teamCity)) =>
+        name -> (jenkins.map(_.common) ++ gitlab.map(_.common) ++ teamCity.map(_.common))
     }
     val resultCache = new ResultCache(jobsForCache, fetchers)
     new AutowireServer(new AutowireApiImpl(resultCache))
