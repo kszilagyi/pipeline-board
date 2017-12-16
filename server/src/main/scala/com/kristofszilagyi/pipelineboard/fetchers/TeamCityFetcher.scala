@@ -8,11 +8,12 @@ import com.kristofszilagyi.pipelineboard.FetcherResult
 import com.kristofszilagyi.pipelineboard.fetchers.JenkinsFetcher.Fetch
 import com.kristofszilagyi.pipelineboard.fetchers.TeamCityFetcher.TCPartialBuildsInfo
 import com.kristofszilagyi.pipelineboard.shared._
+import com.kristofszilagyi.pipelineboard.utils.TeamCityInstantParser
 import com.kristofszilagyi.pipelineboard.utils.Utopia.RichFuture
+import io.circe.{Decoder, Encoder}
 import io.circe.generic.JsonCodec
-import play.api.libs.ws.{WSClient, WSRequest}
+import play.api.libs.ws.WSClient
 import slogging.LazyLogging
-import io.circe.java8.time._
 
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success}
@@ -20,8 +21,11 @@ import scala.util.{Failure, Success}
 final case class TeamCityJob(common: Job)
 
 object TeamCityFetcher {
-  @JsonCodec final case class TCPartialBuildInfo(number: BuildNumber, status: TeamCityBuildStatus, state: TeamCityBuildState, startDate: Instant, finishDate: Option[Instant])
-  type TCPartialBuildsInfo = Seq[TCPartialBuildInfo]
+  private implicit val id: Decoder[Instant] = TeamCityInstantParser.decodeInstant
+  private implicit val ie: Encoder[Instant] = io.circe.java8.time.encodeInstant
+
+  @JsonCodec final case class TCPartialBuildInfo(id: BuildNumber, status: TeamCityBuildStatus, state: TeamCityBuildState, startDate: Instant, finishDate: Option[Instant])
+  @JsonCodec final case class TCPartialBuildsInfo(build: Seq[TCPartialBuildInfo])
 }
 
 //todo cancelled ones are probably missing
@@ -43,8 +47,8 @@ final class TeamCityFetcher(ws: WSClient, jobToFetch: TeamCityJob)(implicit ec: 
         case Failure(exception) => Left(ResponseError.failedToConnect(url, exception))
         case Success(value) => value
       }
-      val resultInStandardFormat = flattenedResults.map(_.map{ tcBuildInfo =>
-        Right(BuildInfo(tcBuildInfo.state.toBuildStatus(tcBuildInfo.status), tcBuildInfo.startDate, tcBuildInfo.finishDate, tcBuildInfo.number))
+      val resultInStandardFormat = flattenedResults.map(_.build.map{ tcBuildInfo =>
+        Right(BuildInfo(tcBuildInfo.state.toBuildStatus(tcBuildInfo.status), tcBuildInfo.startDate, tcBuildInfo.finishDate, tcBuildInfo.id))
       })
       val result = FetcherResult(JobDetails(jobToFetch.common, Some(JobStatus(resultInStandardFormat, Instant.now()))))
       msg.replyTo ! result

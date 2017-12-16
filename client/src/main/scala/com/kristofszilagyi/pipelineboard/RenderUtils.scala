@@ -171,7 +171,7 @@ object RenderUtils extends LazyLogging {
                     <.title(s"Id: ${build.buildNumber.i}\nStart: ${build.buildStart}\n${finishString}Status: ${build.buildStatus}")
                   )
                   Some(
-                    a(href := jobState.static.buildUi(build.buildNumber).u.toString(),
+                    a(href := jobState.static.buildUi(build.buildNumber).rawString,
                       target := "_blank",
                       <.rect(nonStyle ++ style: _*)
                         .x(startPx)
