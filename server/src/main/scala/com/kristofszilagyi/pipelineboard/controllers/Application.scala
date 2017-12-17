@@ -1,5 +1,6 @@
 package com.kristofszilagyi.pipelineboard.controllers
 
+import java.io.File
 import java.net.URLEncoder
 import javax.inject._
 
@@ -35,17 +36,21 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
   }
 
 
-  @SuppressWarnings(Array(Wart.OptionPartial))
+  @SuppressWarnings(Array(Wart.Throw))
   private val autowireServer = {
     val utf8 = "utf-8"
     //todo fix for other OS
     //todo rename with project rename
     val home = System.getenv("HOME")
-    val configPath = s"$home/.pipeline_board/config"
+    val primaryConfigPath = new File("config")
+    val secondaryConfigPath = new File(s"$home/.pipeline_board/config")
+    val configPath = if (primaryConfigPath.isFile) primaryConfigPath
+      else if (secondaryConfigPath.exists()) secondaryConfigPath
+      else throw new RuntimeException(s"Neither $primaryConfigPath (in working dir) nor $secondaryConfigPath exists, aborting.")
+    logger.info(s"Using config: $configPath")
     val config = Config.format.read(Source.fromFile(configPath).mkString.parseYaml)
-    logger.info(s"Congif is: $config")
+    logger.info(s"Config is: $config")
 
-    @SuppressWarnings(Array(Wart.Throw))
     val groupedJobs = ListMap(config.groups.map { group =>
       val jenkinsJobs = group.jenkins.map(_.jobs).getOrElse(Seq.empty).map { jobConfig =>
         val creds = (jobConfig.user, jobConfig.accessToken) match {
@@ -71,7 +76,7 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
 
       val teamCityJobs = group.teamCity.map(_.jobs).getOrElse(Seq.empty).map { jobConfig =>
         val userRoot = jobConfig.url
-        val jobId = userRoot.u.u.query.param("buildTypeId").get
+        val jobId = userRoot.u.u.query.param("buildTypeId").getOrElse(throw new RuntimeException("Url for TeamCity has to have a buildTypeId parameter"))
         val restRoot = userRoot.u.u.copy(pathParts = Seq("guestAuth", "app", "rest", "buildTypes", jobId).map(PathPart.apply),
           query = EmptyQueryString)
         TeamCityJob(
