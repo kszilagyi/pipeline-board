@@ -17,41 +17,46 @@ import play.api.mvc._
 import com.netaporter.uri.dsl._
 import slogging.{LazyLogging, LoggerConfig, PrintLoggerFactory}
 import TypeSafeEqualsOps._
-
+import Application._
 import scala.collection.immutable.{ListMap, ListSet}
 import scala.concurrent.ExecutionContext
 import scala.io.Source
+
+object Application {
+  private val utf8 = "utf-8"
+}
 
 class Application @Inject() (wsClient: WSClient)(val config: Configuration)
                                              (implicit ec: ExecutionContext) extends InjectedController with LazyLogging{
 
   LoggerConfig.factory = PrintLoggerFactory()
 
+  @SuppressWarnings(Array(Wart.Throw))
+  private val jobConfig = {
+    //todo fix for other OS
+    val home = System.getenv("HOME")
+    val primaryConfigPath = new File("config")
+    val secondaryConfigPath = new File(s"$home/.pipeline_board/config")
+    val configPath = if (primaryConfigPath.isFile) primaryConfigPath
+    else if (secondaryConfigPath.exists()) secondaryConfigPath
+    else throw new RuntimeException(s"Neither $primaryConfigPath (in working dir) nor $secondaryConfigPath exists, aborting.")
+    logger.info(s"Using config: $configPath")
+    val config = Config.format.read(Source.fromFile(configPath).mkString.parseYaml)
+    logger.info(s"Config is: $config")
+    config
+  }
+
   def root: Action[AnyContent] = Action {
-    Ok(views.html.index("Pipeline board")(config))
+    Ok(views.html.index(jobConfig.title)(config))
   }
 
   def css: Action[AnyContent] = Action {
     Ok(MyStyles.render).as(CSS)
   }
 
-
   @SuppressWarnings(Array(Wart.Throw))
   private val autowireServer = {
-    val utf8 = "utf-8"
-    //todo fix for other OS
-    //todo rename with project rename
-    val home = System.getenv("HOME")
-    val primaryConfigPath = new File("config")
-    val secondaryConfigPath = new File(s"$home/.pipeline_board/config")
-    val configPath = if (primaryConfigPath.isFile) primaryConfigPath
-      else if (secondaryConfigPath.exists()) secondaryConfigPath
-      else throw new RuntimeException(s"Neither $primaryConfigPath (in working dir) nor $secondaryConfigPath exists, aborting.")
-    logger.info(s"Using config: $configPath")
-    val config = Config.format.read(Source.fromFile(configPath).mkString.parseYaml)
-    logger.info(s"Config is: $config")
-
-    val groupedJobs = ListMap(config.groups.map { group =>
+    val groupedJobs = ListMap(jobConfig.groups.map { group =>
       val jenkinsJobs = group.jenkins.map(_.jobs).getOrElse(Seq.empty).map { jobConfig =>
         val creds = (jobConfig.user, jobConfig.accessToken) match {
           case (Some(user), Some(token)) => Some(JenkinsCredentials(user, token))

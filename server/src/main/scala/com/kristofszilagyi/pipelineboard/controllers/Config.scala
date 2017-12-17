@@ -80,6 +80,6 @@ object ConfigGroup {
 final case class ConfigGroup(groupName: GroupName, jenkins: Option[JenkinsConfig], gitLabCi: Option[GitLabCiConfig], teamCity: Option[TeamCityConfig])
 
 object Config {
-  implicit val format: YamlFormat[Config] = yamlFormat1(Config.apply)
+  implicit val format: YamlFormat[Config] = yamlFormat2(Config.apply)
 }
-final case class Config(groups: Seq[ConfigGroup])
+final case class Config(title: String, groups: Seq[ConfigGroup])
