@@ -80,11 +80,12 @@ object JobType extends Enum[JobType] with CirceEnum[JobType] {
 
   case object TeamCity extends JobType {
     def jobInfo(urls: Urls): RawUrl = urls.restRoot.u / ("builds?locator=running:any,canceled:any&" +
-      "fields=build(number,startDate,finishDate,status,state)")
+      "fields=build(id,startDate,finishDate,status,state)")
 
     def buildInfo(urls: Urls, n: BuildNumber): RawUrl = ??? //todo fix
 
-    def buildUi(urls: Urls, n: BuildNumber): RawUrl = urls.userRoot.u & s"buildId=${n.i}"
+    def buildUi(urls: Urls, n: BuildNumber): RawUrl = RawUrl(urls.userRoot.u.u.copy(pathParts = Seq(PathPart("viewLog.html"))) & s"buildId=${n.i}")
+
   }
 
   def values: immutable.IndexedSeq[JobType] = findValues
@@ -105,7 +106,9 @@ object JobType extends Enum[JobType] with CirceEnum[JobType] {
 @JsonCodec final case class Job(name: JobDisplayName, urls: Urls, tpe: JobType) {
   def buildInfo(n: BuildNumber): RawUrl = tpe.buildInfo(urls, n) //todo this is not implemented on git lab ci, refactor
   def jobInfo: RawUrl = tpe.jobInfo(urls)
-  def buildUi(n: BuildNumber): RawUrl = tpe.buildUi(urls, n)
+  def buildUi(n: BuildNumber): RawUrl = {
+    tpe.buildUi(urls, n)
+  }
 }
 
 

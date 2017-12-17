@@ -40,7 +40,7 @@ object Settings {
       "com.beachape" %%% "enumeratum" % enumeratumVersion,
       "com.beachape" %%% "enumeratum-circe" % enumeratumVersion,
       "com.lihaoyi" %%% "utest" % uTest % Test,
-      "io.lemonlabs" %%% "scala-uri" % "0.5.0",
+      "io.lemonlabs" %%% "scala-uri" % "0.5.1",
       "biz.enef" %%% "slogging" % "0.5.2",
       "com.github.japgolly.scalacss" %%% "core" % scalaCSS
     ) ++ Seq(
