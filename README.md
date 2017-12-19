@@ -15,7 +15,8 @@ Features:
 
 Setup:
 * The config file is read from $WORKING_DIR/config or $HOME/.pipeline_board/config(fallback)
-* For trying it out you can download example_config and rename it to config
+* For trying it out you can download example_config and rename it to config.
+This will set it up to use public repositories as examples.
 
 Screenshot on mock projects:
 ![Alt text](https://user-images.githubusercontent.com/29373148/34178037-b3852d50-e4fd-11e7-8b65-15cce0e97dd5.png)

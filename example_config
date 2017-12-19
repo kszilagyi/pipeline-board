@@ -7,13 +7,6 @@ groups:
           url: https://ci.eclipse.org/elk/job/ElkMetaNightly/
     teamCity:
       jobs:
-        - name: Build Apache Ant using Maven
+        - name: Build Ant using Maven
           url: https://teamcity.jetbrains.com/viewType.html?buildTypeId=ApacheAnt_BuildAntUsingMave
-  - groupName: Second group
-    gitLab:
-      jobs:
-        - name: InkScape
-          url: https://gitlab.com/inkscape/inkscape
-          jobNameOnGitLab: test:linux
-
 
