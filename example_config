@@ -9,4 +9,11 @@ groups:
       jobs:
         - name: Build Ant using Maven
           url: https://teamcity.jetbrains.com/viewType.html?buildTypeId=ApacheAnt_BuildAntUsingMave
+  - groupName: Second group
+    gitLabCi:
+      jobs:
+        - name: Demo Pipeline Project
+          url: https://gitlab.com/DemoPipelineBoard/DemoPipelineProject
+          jobNameOnGitLab: test:linux
+          accessToken: '1AsM-Y8aUsCh9EsPPh-K'
 

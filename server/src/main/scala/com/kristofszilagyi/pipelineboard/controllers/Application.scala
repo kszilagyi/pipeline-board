@@ -18,12 +18,14 @@ import com.netaporter.uri.dsl._
 import slogging.{LazyLogging, LoggerConfig, PrintLoggerFactory}
 import TypeSafeEqualsOps._
 import Application._
+import com.kristofszilagyi.pipelineboard.utils.GitLabUrls
+
 import scala.collection.immutable.{ListMap, ListSet}
 import scala.concurrent.ExecutionContext
 import scala.io.Source
 
 object Application {
-  private val utf8 = "utf-8"
+  val utf8 = "utf-8"
 }
 
 class Application @Inject() (wsClient: WSClient)(val config: Configuration)
@@ -70,11 +72,8 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
       }
 
       val gitLabJobs = group.gitLabCi.map(_.jobs).getOrElse(Seq.empty).map { jobConfig =>
-        val userRoot = jobConfig.url
-        val jobPath = URLEncoder.encode(userRoot.u.u.pathParts.map(_.part).mkString("/"), utf8)
-        val restRoot = userRoot.u.u.copy(pathParts = Seq(PathPart("api"), PathPart("v4"), PathPart("projects")) :+ PathPart(jobPath)) //todo url encode
         GitLabCiJob(
-          Job(jobConfig.name, Urls(userRoot = userRoot, restRoot = RestRoot(RawUrl(restRoot))), GitLabCi),
+          Job(jobConfig.name, Urls(jobConfig.url, GitLabUrls.restRoot(jobConfig.url)), GitLabCi),
           jobConfig.accessToken, jobConfig.jobNameOnGitLab
         )
       }

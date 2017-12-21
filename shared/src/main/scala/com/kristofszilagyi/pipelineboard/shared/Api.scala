@@ -61,7 +61,7 @@ object JobType extends Enum[JobType] with CirceEnum[JobType] {
   case object GitLabCi extends JobType {
     def buildInfo(urls: Urls, n: BuildNumber): RawUrl = ???
     def jobInfo(urls: Urls): RawUrl = {
-      urls.restRoot.u / "jobs" ? ("per_page" -> 100)
+      (urls.restRoot.u / "jobs") ? ("per_page" -> 100)
     }
 
     def buildUi(urls: Urls, n: BuildNumber): RawUrl = {
@@ -97,6 +97,7 @@ object JobType extends Enum[JobType] with CirceEnum[JobType] {
 @JsonCodec final case class RawUrl(u: Uri) {
   def /(s: String): RawUrl = RawUrl(u / s)
   def &(s: String): RawUrl = RawUrl(u & s)
+  def ?(param: (String, Any)): RawUrl = RawUrl(u ? param)
 
   def rawString: String = u.toStringRaw
 
