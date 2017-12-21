@@ -12,8 +12,8 @@ groups:
   - groupName: Second group
     gitLabCi:
       jobs:
-        - name: Demo Pipeline Project
-          url: https://gitlab.com/DemoPipelineBoard/DemoPipelineProject
+        - name: Inkscape
+          url: https://gitlab.com/inkscape/inkscape
           jobNameOnGitLab: test:linux
-          accessToken: '1AsM-Y8aUsCh9EsPPh-K'
+          accessToken: '1AsM-Y8aUsCh9EsPPh-K' # apparently you need an access token on gitlab even if the project is public
 
