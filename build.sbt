@@ -73,6 +73,8 @@ def commonSettings(customScalac: Seq[String]) = Seq(
   addCompilerPlugin(
     "org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full
   ),
+  sources in (Compile, doc) := Seq.empty,
+  publishArtifact in (Compile, packageDoc) := false,
   scalacOptions ++= customScalac
 ) ++ macroAnnotationSettings
 
