@@ -110,8 +110,8 @@ object GitLabCiFetcher {
   @SuppressWarnings(Array(Wart.Recursion))
   private def queryOnePage(logger: Logger, job: GitLabCiJob, url: RawUrl, ws: WSClient, pagesToQuery: Int)
                           (implicit ec: ExecutionContext): Future[Either[ResponseError, PartialJobsInfo]] = {
-    logger.info(s"Querying $url")
     if (pagesToQuery > 0) {
+      logger.info(s"Querying $url")
       val request = job.authenticatedRestRequest(url, ws)
       request.get.map { result =>
         val maybeMaybeNext = extractNextPageLink(url, result)
