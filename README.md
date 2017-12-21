@@ -20,6 +20,7 @@ Currently supports the following CI servers:
 * The config file is read from $WORKING_DIR/config or $HOME/.pipeline_board/config(fallback)
 * For trying it out you can download example_config and rename it to config.
 This will set it up to use public repositories as examples.
+* To run, clone it and run `sbt "server/run [<port>]"` where the `<port>` is optionally the port. If not specified it defaults to 9000.
 
 ## Example config with all possible options
 ```yaml
