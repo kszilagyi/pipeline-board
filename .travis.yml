@@ -9,6 +9,7 @@ install:
   - npm install jsdom
 
 before_script:
+  - eval "$(ssh-agent -s)"
   - echo $DEPLOY_KEY > id_rsa
   - ssh-add id_rsa
 
