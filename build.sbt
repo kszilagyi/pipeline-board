@@ -182,7 +182,7 @@ lazy val root = (project in file("."))
       setReleaseVersion,
       commitReleaseVersion,
       tagRelease,
-      ReleaseStep(releaseStepTask(dist in server))
+      ReleaseStep(releaseStepTask(dist in server)),
       setNextVersion,
       commitNextVersion,
       pushChanges
