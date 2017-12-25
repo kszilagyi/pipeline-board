@@ -80,15 +80,15 @@ def commonSettings(customScalac: Seq[String]) = Seq(
   releaseProcess := Seq(
     checkSnapshotDependencies,
     inquireVersions,
-    runClean,
-    runTest,
-    setReleaseVersion,
-    commitReleaseVersion,
-    tagRelease,
-    ReleaseStep(releaseStepTask(dist)),
-    setNextVersion,
-    commitNextVersion,
-    pushChanges
+    //runClean,
+    //runTest,
+    //setReleaseVersion,
+    //commitReleaseVersion,
+    //tagRelease,
+    ReleaseStep(releaseStepTask(dist))
+    //setNextVersion,
+    //commitNextVersion,
+    //pushChanges
   ),
   publishTo := Some("nowhere" at "somewhere")
 ) ++ macroAnnotationSettings
