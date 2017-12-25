@@ -2,3 +2,5 @@
 target/
 node_modules
 config
+deploy_key
+package-lock.json
