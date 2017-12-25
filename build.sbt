@@ -1,5 +1,6 @@
 import sbt.Project.projectToRef
 import sbt.Keys._
+import ReleaseTransformations._
 
 //Skeleton copied and modified from: https://github.com/ochrons/scalajs-spa-tutorial
 
@@ -75,7 +76,20 @@ def commonSettings(customScalac: Seq[String]) = Seq(
   ),
   sources in (Compile, doc) := Seq.empty,
   publishArtifact in (Compile, packageDoc) := false,
-  scalacOptions ++= customScalac
+  scalacOptions ++= customScalac,
+  releaseProcess := Seq(
+    checkSnapshotDependencies,
+    inquireVersions,
+    runClean,
+    runTest,
+    setReleaseVersion,
+    commitReleaseVersion,
+    tagRelease,
+    ReleaseStep(releaseStepTask(publish in Universal)),
+    setNextVersion,
+    commitNextVersion,
+    pushChanges
+  )
 ) ++ macroAnnotationSettings
 
 // a special crossProject for configuring a JS/JVM/shared structure
