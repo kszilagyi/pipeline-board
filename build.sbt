@@ -76,21 +76,7 @@ def commonSettings(customScalac: Seq[String]) = Seq(
   ),
   sources in (Compile, doc) := Seq.empty,
   publishArtifact in (Compile, packageDoc) := false,
-  scalacOptions ++= customScalac,
-  releaseProcess := Seq(
-    checkSnapshotDependencies,
-    inquireVersions,
-    //runClean,
-    //runTest,
-    //setReleaseVersion,
-    //commitReleaseVersion,
-    //tagRelease,
-    ReleaseStep(releaseStepTask(dist))
-    //setNextVersion,
-    //commitNextVersion,
-    //pushChanges
-  ),
-  publishTo := Some("nowhere" at "somewhere")
+  scalacOptions ++= customScalac
 ) ++ macroAnnotationSettings
 
 // a special crossProject for configuring a JS/JVM/shared structure
@@ -188,7 +174,19 @@ lazy val server = (project in file("server"))
 
 
 lazy val root = (project in file("."))
-    .settings(commonSettings(customScalacOptions))
+    .settings(releaseProcess := Seq(
+      checkSnapshotDependencies,
+      inquireVersions,
+      runClean,
+      runTest,
+      setReleaseVersion,
+      commitReleaseVersion,
+      tagRelease,
+      ReleaseStep(releaseStepTask(dist in server))
+      setNextVersion,
+      commitNextVersion,
+      pushChanges
+    ))
     .aggregate(client, server, sharedJVM, sharedJS)
 
 // loads the root project at sbt startup
