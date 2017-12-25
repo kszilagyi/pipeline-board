@@ -200,7 +200,9 @@ lazy val ReleaseCmd = Command.command("release") {
       state
 }
 
-lazy val root = (project in file(".")).aggregate(client, server, sharedJVM, sharedJS)
+lazy val root = (project in file("."))
+    .commonSettings(customScalacOptions)
+    .aggregate(client, server, sharedJVM, sharedJS)
 
 // loads the root project at sbt startup
 onLoad in Global := (Command.process("project root", _: State)) compose (onLoad in Global).value
