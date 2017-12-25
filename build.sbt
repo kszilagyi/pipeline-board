@@ -89,7 +89,8 @@ def commonSettings(customScalac: Seq[String]) = Seq(
     setNextVersion,
     commitNextVersion,
     pushChanges
-  )
+  ),
+  publishTo := Some("nowhere" at "somewhere")
 ) ++ macroAnnotationSettings
 
 // a special crossProject for configuring a JS/JVM/shared structure
@@ -162,7 +163,6 @@ lazy val server = (project in file("server"))
     version := Settings.version,
     scalaVersion := Settings.versions.scala,
     libraryDependencies ++= Settings.jvmDependencies.value,
-    commands += ReleaseCmd,
     // triggers scalaJSPipeline when using compile or continuous compilation
     compile in Compile := {
       ((compile in Compile) dependsOn scalaJSPipeline).value
@@ -186,19 +186,6 @@ lazy val server = (project in file("server"))
   .aggregate(clients.map(projectToRef): _*)
   .dependsOn(sharedJVM % "test->test;compile->compile")
 
-
-// Command for building a release
-lazy val ReleaseCmd = Command.command("release") {
-  state =>
-    "set elideOptions in client := Seq(\"-Xelide-below\", \"WARNING\")" ::
-      "client/clean" ::
-      "client/test" ::
-      "server/clean" ::
-      "server/test" ::
-      "server/dist" ::
-      "set elideOptions in client := Seq()" ::
-      state
-}
 
 lazy val root = (project in file("."))
     .settings(commonSettings(customScalacOptions))
