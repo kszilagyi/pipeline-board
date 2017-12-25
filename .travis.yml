@@ -10,7 +10,7 @@ install:
 
 before_script:
   - eval "$(ssh-agent -s)"
-  - echo $DEPLOY_KEY > deploy_key
+  - openssl aes-256-cbc -K $encrypted_42009c20f3b7_key -iv $encrypted_42009c20f3b7_iv -in deploy_key.enc -out deploy_key -d
   - chmod 600 deploy_key
   - ssh-add deploy_key
 
