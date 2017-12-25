@@ -8,4 +8,12 @@ install:
   - npm install
   - npm install jsdom
 
+before_script:
+  - echo $DEPLOY_KEY > id_rsa
+  - ssh-add id_rsa
+
 script: sbt test
+
+before_deploy:
+  - if [ "$TRAVIS_BRANCH" == "release" ]; then sbt "release with-defaults skip-tests"; fi
+
