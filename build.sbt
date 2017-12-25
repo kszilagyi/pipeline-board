@@ -76,7 +76,6 @@ def commonSettings(customScalac: Seq[String]) = Seq(
   sources in (Compile, doc) := Seq.empty,
   publishArtifact in (Compile, packageDoc) := false,
   scalacOptions ++= customScalac,
-  parallelExecution in ThisBuild := false //for travis
 ) ++ macroAnnotationSettings
 
 // a special crossProject for configuring a JS/JVM/shared structure
