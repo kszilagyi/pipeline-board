@@ -1,6 +1,5 @@
 language: scala
 
-
 install:
   - . $HOME/.nvm/nvm.sh
   - nvm install stable
@@ -19,3 +18,14 @@ script: sbt test
 before_deploy:
   - if [ "$TRAVIS_BRANCH" == "release" ]; then sbt "release with-defaults skip-tests"; fi
 
+
+deploy:
+  provider: releases
+  api_key:
+    secure: K7m+ulnmsp5sju0kBaiHbiysaDmYL3b8dJHSwFg+oPfBw1dMGlEEq0lnk7s7IS6yqTnGY6NgRMSgS1//2DBCyqK0f4+x/7LFLOJCvDZ3JHsYGVZnsxviJLYecy6MKjXqrJuEw9KSpfYdil7RidsNQ5QWNBUDpGs79eElnzGhHhPcPt/G5K64Nl9HuEHzJs0Sf4Z2TojDp0iMfEwDS22PHDa0E9iQNokoyN9xBZSFNDQTrHQyB07+w8WPj/6CBb+obVKWCVls05NyzOFJx5muCcOAC2DGI6721H8qIhih10CcDDsbpOoTPHyqAsxipe+7NxkkK/fQN6isV8yaqNAa6SSJqW868ho3Pkord4t+s5iBDgiQkFV5zlepejjTxnAZHIVNtHyZVtsdwVekEIzK57ZcUuiDS0BDVa3JxWTr7YgrifS/ClbkYJEmd2jkWhDvsVhvBkxfXAALcnGYMWyeqCzGIXDPhB3VYBRjFH1KC9dmjkTYvKswBYZaXXVOSno0mvYhgIIN1gvgJJ4+JhGmy7XK86ta1KbkKaxkO+C9PjEVfPTO4MatkDDVYIO7Ipd/WbuZo10kwHlVI1hRtmIiWSb4FnhwQuzGU0bLMXDKqYOq4C4sJ51qhQWmSrw5lylbS+CSvNBahW0PsMUfVxtvNC+wio+a4dyq4Zf2X6YITfc=
+
+  file_glob: true
+  file: server/target/universal/server-*.zip
+  on:
+    repo: kszilagyi/pipeline-board
+    branch: release
