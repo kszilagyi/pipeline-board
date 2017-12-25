@@ -85,7 +85,7 @@ def commonSettings(customScalac: Seq[String]) = Seq(
     setReleaseVersion,
     commitReleaseVersion,
     tagRelease,
-    ReleaseStep(releaseStepTask(publish in Universal)),
+    ReleaseStep(releaseStepTask(dist)),
     setNextVersion,
     commitNextVersion,
     pushChanges
