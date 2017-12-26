@@ -26,7 +26,7 @@ Currently supports the following CI servers:
 ### Binary
 * Download latest release zip
 * Extract
-* cd into the directory then run: `bin/server [-Dhttp.port=<port>]`. The default port is 9000 if `-Dhttp.port` is not specified. The config has to be present either in that directory or in `$HOME/.pipeline_board/config(fallback)`
+* cd into the directory then run: `bin/pipeline-board [-Dhttp.port=<port>]`. The default port is 9000 if `-Dhttp.port` is not specified. The config has to be present either in that directory or in `$HOME/.pipeline_board/config(fallback)`
 
 ### From source
 * To run, clone it and run `sbt "server/run [<port>]"` where the `<port>` is optionally the port. If not specified it defaults to 9000.
