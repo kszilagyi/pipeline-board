@@ -8,6 +8,8 @@ install:
   - npm install jsdom
 
 before_script:
+  - export AUTHOR_NAME="$(git log -1 $TRAVIS_COMMIT --pretty="%aN")"
+  - if [ "AUTHOR_NAME" == "Travis CI User" ] exit 1; # abort the build
   - eval "$(ssh-agent -s)"
   - openssl aes-256-cbc -K $encrypted_42009c20f3b7_key -iv $encrypted_42009c20f3b7_iv -in deploy_key.enc -out deploy_key -d
   - chmod 600 deploy_key
