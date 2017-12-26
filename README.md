@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/kszilagyi/pipeline-board.svg?branch=master)](https://travis-ci.org/kszilagyi/pipeline-board)
+
 # Pipeline board
 Simple dashboard to aggregate results of multiple jobs from multiple heterogeneous CI servers.
 
