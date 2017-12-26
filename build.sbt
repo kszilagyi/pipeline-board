@@ -119,7 +119,6 @@ lazy val elideOptions = settingKey[Seq[String]]("Set limit for elidable function
 lazy val client: Project = (project in file("client"))
   .settings(
     name := "client",
-    version := Settings.version,
     scalaVersion := Settings.versions.scala,
     libraryDependencies ++= Settings.scalajsDependencies.value,
     // by default we do development build, no eliding
@@ -146,7 +145,6 @@ lazy val clients = Seq(client)
 lazy val server = (project in file("server"))
   .settings(
     name := "server",
-    version := Settings.version,
     scalaVersion := Settings.versions.scala,
     libraryDependencies ++= Settings.jvmDependencies.value,
     // triggers scalaJSPipeline when using compile or continuous compilation
