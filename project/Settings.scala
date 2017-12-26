@@ -8,9 +8,6 @@ import sbt.Keys.libraryDependencies
 object Settings {
   val name = "pipeline-board"
 
-  /** The version of your application */
-  val version = "0.0.1"
-
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   object versions {
     val scala = "2.12.2"
