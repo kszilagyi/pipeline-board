@@ -36,7 +36,7 @@ deploy:
       "Mc8RXgMvO4dcsFVrmRse4hr+7/5NNd4OIjkc//5tRiUQ4YW1KvM3gBrzbDuU8jjRWgO5aG6HSKTwY5s5xFhNoo0bZ3sVOpaMV/NE0I9jDD/VN8KgMQHoCe46qWR70D4mM+dPC9enansAeaKr07boczB4y1HqzcuCvp4H2SsI1HUW4pUynzyMhHMWbymo59ykmM2frZCkH+gdHOFc9oMwsijdBZZNR00h3LB5GwM/mMFyQap/66b2Mpj/5AdPpmcCMOS54LQVCZZddhfBcBB7V6njGdGCMh7P1PA7twLbrU195xAFdtfIwqVFr34R0K9W2wCAtqwxMfHx89SBYs2EF+Qzgf2+Ac+IG2pDcyIdSNSABxk/0aR6K34qPIxEDjkNEdCq23aqFdTjgDN5BJF7ety83AT2mr27/5P1BllyUPmM7Sqx1+szfvZLiqJtjvMzQSnfNspAwg9s5MGZYjX+rEGI6PCcReWMj8B82bbsOTXrf7zn7F79noXPjWECrqw146LXKOWtae6yskBgvnmdvBH6qhPt30FhfwLD4NDvfmGGaI0LSrpsz2KOYP0hm5XF9NDdlGI4fiS7KlpYFS7O6+jdzRAGprOtf9/+BLlqbm2rDRzgMX2zdWG9naDb3lx58qfIXr2vZ1IEyLTax7MQ1c7994nK2YA9KL46Xuj2p9Q="
 
   file_glob: true
-  file: server/target/universal/server-*.zip
+  file: server/target/universal/pipeline-board-*.zip
   on:
     repo: kszilagyi/pipeline-board
     branch: release
