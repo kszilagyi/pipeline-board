@@ -21,6 +21,7 @@ env:
        "mybLARJuXHfERl3MBG6bbPUPzuy2wT3pVayc1azi76+U+OEt6k06l8hcqNOSpMPXkXTmFqCpFssnRKLA4H29fChxnwvwSQAFGTHe70CXXXoMYQEd1jvTbLB+n1u1YHqn7AKHlcffDbQy/fCeZpKL3cY67F/fFCN97Bl38492eSlHF2FfZ18zT8Husp0EA7ud9hAcsXDlF9qrUTukZUfmK8GYS3tlzR4FsyReGVwA/T6/XJLW13mc9oa5UMif4BrDGKsa449WZbEIz6b8x5igY3BX1eUBlL8sMRkRkH6UVWh+t9ivhvYE9fqlebLTt7LRTeLpWTQRzao2Mp+HZwOjOUne2ZLzoemN0Fbyv06WDGM28V0U6BWby6wB/o7cxNESxCndX+WegRl6CPZUA2nfxZccd2c+1fwyIuq3/1mo7C25fCQAkHZ16U5PdphGJgpn0igedp2s0jv3SurYkqmoAJGarIBXy15sHA4PYUYn4oMXn1SGRv6pK4YWuENhxymQmzWP2udfAXeho4NNETvUfnGZQIh67gRto1V+zmwOQQIO07En6VozifLRDYer5fsoDKB7H4jjwTW7DutfzlKeJLu3NGDMrTVDcduH4hqbgYwEx2/8lRv/ftgSnS2gjlnD8PrsGWMOA83Qm4XnNOrPXL3y3ItvWpT8J7tNBTnGF4s="
 
 before_deploy:
+  - export VERSION_TAG="v`egrep -io '[0-9.]*' version.sbt`"
   - if [ "$TRAVIS_BRANCH" == "release" ]; then git remote set-url origin git@github.com:kszilagyi/pipeline-board.git; git checkout $TRAVIS_BRANCH; sbt "release with-defaults skip-tests"; fi
 
 
@@ -35,3 +36,6 @@ deploy:
   on:
     repo: kszilagyi/pipeline-board
     branch: release
+  tag_name: $VERSION_TAG
+  skip-cleanup: true
+
