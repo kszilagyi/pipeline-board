@@ -144,7 +144,7 @@ lazy val clients = Seq(client)
 // instantiate the JVM project for SBT with some additional settings
 lazy val server = (project in file("server"))
   .settings(
-    name := "server",
+    name := "pipeline-board",
     scalaVersion := Settings.versions.scala,
     libraryDependencies ++= Settings.jvmDependencies.value,
     // triggers scalaJSPipeline when using compile or continuous compilation
