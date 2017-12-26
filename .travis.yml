@@ -1,5 +1,9 @@
 language: scala
 
+before_install:
+  - export AUTHOR_NAME="$(git log -1 $TRAVIS_COMMIT --pretty="%aN")"
+  - if [ "$AUTHOR_NAME" == "Travis CI User" ]; then echo "stopping"; exit 1; fi # abort the build if on travis
+
 install:
   - . $HOME/.nvm/nvm.sh
   - nvm install stable
@@ -8,8 +12,6 @@ install:
   - npm install jsdom
 
 before_script:
-  - export AUTHOR_NAME="$(git log -1 $TRAVIS_COMMIT --pretty="%aN")"
-  - if [ "AUTHOR_NAME" == "Travis CI User" ]; then exit 1; fi # abort the build if on travis
   - eval "$(ssh-agent -s)"
   - openssl aes-256-cbc -K $encrypted_42009c20f3b7_key -iv $encrypted_42009c20f3b7_iv -in deploy_key.enc -out deploy_key -d
   - chmod 600 deploy_key
