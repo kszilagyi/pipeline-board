@@ -126,7 +126,7 @@ lazy val client: Project = (project in file("client"))
     scalacOptions ++= elideOptions.value,
     jsDependencies ++= Settings.jsDependencies.value,
     // RuntimeDOM is needed for tests
-    jsDependencies += RuntimeDOM % "test",
+    jsEnv := new org.scalajs.jsenv.jsdomnodejs.JSDOMNodeJSEnv,
     // yes, we want to package JS dependencies
     skip in packageJSDependencies := false,
     // use Scala.js provided launcher code to start the client app
@@ -188,4 +188,3 @@ lazy val root = (project in file("."))
     .aggregate(client, server, sharedJVM, sharedJS)
 
 // loads the root project at sbt startup
-onLoad in Global := (Command.process("project root", _: State)) compose (onLoad in Global).value
