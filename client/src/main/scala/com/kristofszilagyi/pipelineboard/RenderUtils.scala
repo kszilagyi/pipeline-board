@@ -9,7 +9,6 @@ import com.kristofszilagyi.pipelineboard.shared.ZonedDateTimeOps._
 import com.kristofszilagyi.pipelineboard.shared._
 import japgolly.scalajs.react.vdom.PackageBase.VdomAttr
 import japgolly.scalajs.react.vdom.svg_<^.{^, _}
-import japgolly.scalajs.react.vdom.{SvgTagOf => _, TagMod => _, _}
 import org.scalajs.dom.raw._
 import org.scalajs.dom.svg.{A, G, SVG}
 import slogging.LazyLogging
@@ -18,6 +17,7 @@ import com.kristofszilagyi.pipelineboard.shared.pixel.Pixel._
 import TypeSafeEqualsOps._
 import cats.data.NonEmptyList
 import com.kristofszilagyi.pipelineboard.shared.NonEmptyListOps.RichNonEmptyList
+import japgolly.scalajs.react.vdom.all.svg
 
 import scala.collection.immutable
 import scala.concurrent.duration.{DurationLong, FiniteDuration}
@@ -171,7 +171,7 @@ object RenderUtils extends LazyLogging {
                     <.title(s"Id: ${build.buildNumber.i}\nStart: ${build.buildStart}\n${finishString}Status: ${build.buildStatus}")
                   )
                   Some(
-                    a(href := jobState.static.buildUi(build.buildNumber).rawString,
+                    a(svg.xlinkHref := jobState.static.buildUi(build.buildNumber).rawString,
                       target := "_blank",
                       <.rect(nonStyle ++ style: _*)
                         .x(startPx)
@@ -219,7 +219,7 @@ object RenderUtils extends LazyLogging {
               warningMsg,
             ),
             a(
-              href := jobState.static.urls.userRoot.u.rawString,
+              svg.xlinkHref := jobState.static.urls.userRoot.u.rawString,
               target := "_blank",
               <.tspan(
                 textDecoration := "underline",
