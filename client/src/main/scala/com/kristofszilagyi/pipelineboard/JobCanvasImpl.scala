@@ -173,8 +173,10 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
 
     val groupedDrawObjs = <.g((strips ++ dragListeners) :+ wheelListener: _*)
     val checkboxId = "follow"
+    val foreignHeight = backgroundBaseLine(1).toH
     val input = <.foreignObject(
       ^.width := 100, //single line
+      ^.height := foreignHeight.d.toInt,
       //todo replace this with SVG checkbox, this is quite hard to align
       html_<^.<div(
         html_<^.< input(
@@ -190,7 +192,7 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
         html_<^.<.label(html_<^.^.`for` := checkboxId, "Follow")
       )
     ).x(labelEnd)(anythingPos)
-     .y(backgroundBaseLine(-1))(anythingPos)
+     .y(foreignHeight.toY * -1)(anythingPos)
     val offsetOnPageY = 50.ypx
     val svgParams = List(
       moveTo(y = offsetOnPageY, elements = List(groupedDrawObjs, verticleLines, periodText) ++

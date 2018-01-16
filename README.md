@@ -19,9 +19,18 @@ Currently supports the following CI servers:
 ![Alt text](https://user-images.githubusercontent.com/29373148/34178037-b3852d50-e4fd-11e7-8b65-15cce0e97dd5.png)
 
 ## Setup
-* The config file is read from $WORKING_DIR/config or $HOME/.pipeline_board/config(fallback)
-* For trying it out you can download example_config and rename it to config.
-This will set it up to use public repositories as examples.
+* The config file is read from `$WORKING_DIR/config` or `$HOME/.pipeline_board/config`(fallback)
+* For trying it out you can download example_config and rename it to config. This will set it up to use public repositories as examples.
+
+
+### Binary
+* Download [latest release](https://github.com/kszilagyi/pipeline-board/releases/latest) (download the zip but not the source)
+* Extract
+* `chmod +x bin/pipeline-board`
+* cd into the directory then run: `bin/pipeline-board [-Dhttp.port=<port>]`. The default port is 9000 if `-Dhttp.port` is not specified. The config has to be present either in that directory or in `$HOME/.pipeline_board/config(fallback)`
+* If you get `This application is already running` message you need to remove `RUNNING_PID` in the directory.
+
+### From source
 * To run, clone it and run `sbt "server/run [<port>]"` where the `<port>` is optionally the port. If not specified it defaults to 9000.
 
 ## Example config with all possible options
