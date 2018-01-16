@@ -24,9 +24,11 @@ Currently supports the following CI servers:
 
 
 ### Binary
-* Download latest release zip
+* Download [latest release](https://github.com/kszilagyi/pipeline-board/releases/latest) (download the zip but not the source)
 * Extract
-* cd into the directory then run: `bin/server [-Dhttp.port=<port>]`. The default port is 9000 if `-Dhttp.port` is not specified. The config has to be present either in that directory or in `$HOME/.pipeline_board/config(fallback)`
+* `chmod +x bin/pipeline-board`
+* cd into the directory then run: `bin/pipeline-board [-Dhttp.port=<port>]`. The default port is 9000 if `-Dhttp.port` is not specified. The config has to be present either in that directory or in `$HOME/.pipeline_board/config(fallback)`
+* If you get `This application is already running` message you need to remove `RUNNING_PID` in the directory.
 
 ### From source
 * To run, clone it and run `sbt "server/run [<port>]"` where the `<port>` is optionally the port. If not specified it defaults to 9000.
