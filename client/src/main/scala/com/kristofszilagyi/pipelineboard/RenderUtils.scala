@@ -9,6 +9,7 @@ import com.kristofszilagyi.pipelineboard.shared.ZonedDateTimeOps._
 import com.kristofszilagyi.pipelineboard.shared._
 import japgolly.scalajs.react.vdom.PackageBase.VdomAttr
 import japgolly.scalajs.react.vdom.svg_<^.{^, _}
+import japgolly.scalajs.react.vdom.{SvgTagOf => _, TagMod => _, _}
 import org.scalajs.dom.raw._
 import org.scalajs.dom.svg.{A, G, SVG}
 import slogging.LazyLogging
