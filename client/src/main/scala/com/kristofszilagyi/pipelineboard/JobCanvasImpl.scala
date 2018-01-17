@@ -199,10 +199,23 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
          leftGroupColors ++ rightGroupColors ++ leftLabels ++ rightLabels ++ groupNameLabels  :+ input)
     )
 
-    <.svg(
-      svgParams: _*
-    ).width(windowWidth)
-     .height((timestampTextY + offsetOnPageY + 10.ypx).toH) //+10 to let the bottom of the text in)
+    html_<^.<.div(
+      html_<^.<.div(
+        html_<^.^.position := "absolute",
+        html_<^.^.top := "10px",
+        html_<^.^.right := "10px",
+        html_<^.<.a(
+          html_<^.^.href := "https://github.com/kszilagyi/pipeline-board",
+          html_<^.^.target := "_blank",
+          "About"
+        )
+      ),
+      <.svg(
+        svgParams: _*
+      ).width(windowWidth)
+        .height((timestampTextY + offsetOnPageY + 10.ypx).toH) //+10 to let the bottom of the text in)
+    )
+
 
   }
   def handleWheel(e: SyntheticWheelEvent[SVGElement]): CallbackTo[Unit] = {
