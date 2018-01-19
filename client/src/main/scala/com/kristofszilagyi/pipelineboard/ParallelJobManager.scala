@@ -30,7 +30,7 @@ object ParallelJobManager {
   }
 
   @tailrec
-  def rec(remainingSortedBuilds: Seq[BuildInfo], ongoingIsland: Island, finishedIslands: Set[Island]): Set[Island] = {
+  private def rec(remainingSortedBuilds: Seq[BuildInfo], ongoingIsland: Island, finishedIslands: Set[Island]): Set[Island] = {
     remainingSortedBuilds match {
       case head :: tail =>
         val overlaps = ongoingIsland.builds.filter(_.overlap(head))

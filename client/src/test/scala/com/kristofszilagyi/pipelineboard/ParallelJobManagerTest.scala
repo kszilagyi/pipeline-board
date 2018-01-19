@@ -7,24 +7,57 @@ import com.kristofszilagyi.pipelineboard.shared.{BuildInfo, BuildNumber}
 import utest._
 
 object ParallelJobManagerTest  extends TestSuite {
+  private def buildInfo(startMillis: Long, endMilli: Long): BuildInfo = {
+    BuildInfo.successful(Instant.ofEpochMilli(startMillis), Instant.ofEpochMilli(endMilli), BuildNumber(1))
+  }
 
   def tests = TestSuite {
     'OneElement {
-      val buildInfo = BuildInfo.successful(Instant.ofEpochMilli(1), Instant.ofEpochMilli(2), BuildNumber(2))
-      overlappingIslands(Traversable(buildInfo)) ==> Set(Island(Seq(buildInfo), 1))
+      val b1 = buildInfo(1, 2)
+      overlappingIslands(Traversable(b1)) ==> Set(Island(Seq(b1), 1))
     }
 
     'MultipleSeparateElements {
-      val buildInfo1 = BuildInfo.successful(Instant.ofEpochMilli(1), Instant.ofEpochMilli(2), BuildNumber(2))
-      val buildInfo2 = BuildInfo.successful(Instant.ofEpochMilli(3), Instant.ofEpochMilli(4), BuildNumber(4))
-      overlappingIslands(Traversable(buildInfo1, buildInfo2)) ==> Set(Island(Seq(buildInfo1), 1), Island(Seq(buildInfo2), 1))
+      val b1 = buildInfo(1, 2)
+      val b2 = buildInfo(3, 4)
+      overlappingIslands(Traversable(b1, b2)) ==> Set(Island(Seq(b1), 1), Island(Seq(b2), 1))
     }
 
     'TwoOverlappingElement {
-      val buildInfo1 = BuildInfo.successful(Instant.ofEpochMilli(1), Instant.ofEpochMilli(10), BuildNumber(2))
-      val buildInfo2 = BuildInfo.successful(Instant.ofEpochMilli(3), Instant.ofEpochMilli(5), BuildNumber(15))
-      overlappingIslands(Traversable(buildInfo1, buildInfo2)) ==> Set(Island(Seq(buildInfo1, buildInfo2), 2))
+      val b1 = buildInfo(1, 10)
+      val b2 = buildInfo(3, 5)
+      overlappingIslands(Traversable(b1, b2)) ==> Set(Island(Seq(b1, b2), 2))
     }
+
+    'TwoOverlappingElementAndOneNot {
+      val b1 = buildInfo(1, 10)
+      val b2 = buildInfo(3, 5)
+      val b3 = buildInfo(100, 200)
+      overlappingIslands(Traversable(b1, b2, b3)) ==> Set(Island(Seq(b1, b2), 2), Island(Seq(b3), 1))
+    }
+
+    'ThreeOverlappingElementWithMax2 {
+      val b1 = buildInfo(1, 10)
+      val b2 = buildInfo(5, 20)
+      val b3 = buildInfo(15, 25)
+      overlappingIslands(Traversable(b1, b2, b3)) ==> Set(Island(Seq(b1, b2, b3), 2))
+    }
+
+    'ThreeOverlappingElementWithMax2WrongOrder {
+      val b1 = buildInfo(1, 10)
+      val b2 = buildInfo(5, 20)
+      val b3 = buildInfo(15, 25)
+      overlappingIslands(Traversable(b3, b2, b1)) ==> Set(Island(Seq(b1, b2, b3), 2))
+    }
+
+    'ThreeOverlappingElementWithMax3 {
+      val b1 = buildInfo(1, 10)
+      val b2 = buildInfo(5, 20)
+      val b3 = buildInfo(6, 25)
+      overlappingIslands(Traversable(b1, b2, b3)) ==> Set(Island(Seq(b1, b2, b3), 3))
+    }
+
+
   }
 
 }
