@@ -1,5 +1,6 @@
 package com.kristofszilagyi.pipelineboard.shared
 
+import com.kristofszilagyi.pipelineboard.shared.Wart.discard
 import utest._
 import utest.framework.{Test, Tree}
 
@@ -21,8 +22,7 @@ object GenericOptionTest extends TestSuite {
     }
 
     'test3 {
-      println(algo(GenericSome[Int](1)).t) //Wow
-
+      discard(algo(GenericSome[Int](1)).t) //Wow
     }
 
 
