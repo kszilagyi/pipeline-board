@@ -35,7 +35,10 @@ object BuildInfo {
                                       maybeBuildFinish: Option[Instant],
                                       buildNumber: BuildNumber) {
   def overlap(other: BuildInfo): Boolean = {
-    (buildStart.isBefore(other.buildStart) && maybeBuildFinish.getOrElse(Instant.MAX).isAfter(other.buildStart)) ||
-      (buildStart.isAfter(other.buildStart) && buildStart.isBefore(other.maybeBuildFinish.getOrElse(Instant.MAX)))
+    if (buildStart.isBefore(other.buildStart)) {
+      maybeBuildFinish.getOrElse(Instant.MAX).isAfter(other.buildStart)
+    } else {
+      buildStart.isBefore(other.maybeBuildFinish.getOrElse(Instant.MAX))
+    }
   }
 }
