@@ -6,14 +6,14 @@ import com.kristofszilagyi.pipelineboard.shared.TypeSafeEqualsOps._
 import scala.annotation.tailrec
 
 object Island {
-  def empty: Island = Island(Seq.empty)
+  def empty: Island = Island(List.empty)
   def of(b: BuildInfo): Island = {
-    Island(Seq(b))
+    Island(List(b))
   }
 }
 
 
-final case class Island(builds: Seq[BuildInfo]) {
+final case class Island(builds: List[BuildInfo]) {
   def add(newBuild: BuildInfo): Island = {
     Island(builds :+ newBuild)
   }
@@ -28,7 +28,7 @@ final case class Island(builds: Seq[BuildInfo]) {
 final case class Slot(i: Int)
 
 
-final case class SlottedIsland(builds: Map[Slot, Seq[BuildInfo]])
+final case class SlottedIsland(builds: Map[Slot, List[BuildInfo]])
 
 object ParallelJobManager extends LazyLogging {
   def overlappingIslands(builds: Traversable[BuildInfo]): Set[Island] = {
@@ -38,7 +38,7 @@ object ParallelJobManager extends LazyLogging {
 
   @tailrec
   private def rec(remainingSortedBuilds: Seq[BuildInfo], ongoingIsland: Island, finishedIslands: Set[Island]): Set[Island] = {
-    remainingSortedBuilds match {
+    remainingSortedBuilds.toList match {
       case head :: tail =>
         val overlaps = ongoingIsland.builds.filter(_.overlap(head))
         if (overlaps.nonEmpty) {
@@ -54,7 +54,7 @@ object ParallelJobManager extends LazyLogging {
   }
 
   @tailrec
-  private def recSlotify(remainingBuilds: Seq[BuildInfo], slots: Map[Slot, Seq[BuildInfo]]): SlottedIsland = {
+  private def recSlotify(remainingBuilds: List[BuildInfo], slots: Map[Slot, List[BuildInfo]]): SlottedIsland = {
     remainingBuilds match {
       case build :: rest =>
         val sortedSlots = slots.toSeq.sortBy(_._1.i)
@@ -65,7 +65,7 @@ object ParallelJobManager extends LazyLogging {
           case Some(slot) =>
             slot
           case None =>
-            Slot(sortedSlots.size) -> Seq.empty
+            Slot(sortedSlots.size) -> List.empty
         }
         recSlotify(rest, slots + (freeSlot -> (buildsInSlot :+ build)))
       case Nil =>

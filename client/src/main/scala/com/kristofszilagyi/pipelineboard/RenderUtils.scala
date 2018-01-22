@@ -134,60 +134,70 @@ object RenderUtils extends LazyLogging {
               <.title(err.s)
             ).y(stripHeight.toY / 2), <.title(err.s))
           case Right(runs) =>
-            runs.flatMap(either => either match {
+            val notSlottedBuilds = runs.flatMap(either => either match {
               case Right(build) =>
-                val startRelativeToDrawingAreaBeginning = (build.buildStart - jobArea.startTime).max(0.seconds)
-                val endRelativeToDrawingAreaBeginning = build.maybeBuildFinish match {
-                  case Some(buildFinish) => (buildFinish - jobArea.startTime).min(jobArea.length)
-                  case None => jobArea.length
-                }
-
-                val buildRectangle = if (endRelativeToDrawingAreaBeginning.toNanos > 0 &&
-                  startRelativeToDrawingAreaBeginning < jobArea.length) {
-
-                  val relativeStartRatio = startRelativeToDrawingAreaBeginning / jobArea.length
-                  val relativeEndRatio = endRelativeToDrawingAreaBeginning / jobArea.length
-
-                  val relativeWidthRatio = relativeEndRatio - relativeStartRatio //todo assert if this is negative, also round up to >10?
-                  val startPx = (jobArea.width * relativeStartRatio).toX
-                  //todo this will go out of the drawing area, fix
-                  val width = 4.wpx.max(jobArea.width * relativeWidthRatio) //todo display these nicely, probably not really a problem
-                  //todo header, colors, hovering, zooming, horizontal lines, click
-
-                  val style: List[TagMod] = List(MyStyles.rectange, build.buildStatus match {
-                    case Created => MyStyles.created
-                    case Pending => MyStyles.pending
-                    case Building => MyStyles.building
-                    case Failed => MyStyles.failed
-                    case Successful => MyStyles.success
-                    case Aborted => MyStyles.aborted
-                    case Unstable => MyStyles.unstable
-                  })
-
-                  val finishString = build.maybeBuildFinish.map(time => s"Finish: $time\n").getOrElse("")
-                  val nonStyle = List(
-                    className := s"build_rect",
-                    //todo add length
-                    //todo replace this with jQuery or sg similar and make it pop up immediately not after delay and not browser dependent way
-                    <.title(s"Id: ${build.buildNumber.i}\nStart: ${build.buildStart}\n${finishString}Status: ${build.buildStatus}")
-                  )
-                  Some(
-                    a(svg.xlinkHref := jobState.static.buildUi(build.buildNumber).rawString,
-                      target := "_blank",
-                      <.rect(nonStyle ++ style: _*)
-                        .x(startPx)
-                        .y(((stripHeight - rectangleHeight) / 2).toY)
-                        .width(width)
-                        .height(rectangleHeight)
-                    )
-                  )
-                } else
-                  None
-                buildRectangle.toList
+                List(build)
               case Left(error) =>
                 logger.warn(s"Build failed to query: ${error.s}")
                 None.toList
             })
+
+            val slottedBuilds = ParallelJobManager.slotify(ParallelJobManager.overlappingIslands(notSlottedBuilds)).map(_.builds)
+            slottedBuilds.flatMap { island =>
+              island.map {
+                case (slot, buildsInSlot) =>
+                  buildsInSlot.map { build =>
+                    val startRelativeToDrawingAreaBeginning = (build.buildStart - jobArea.startTime).max(0.seconds)
+                    val endRelativeToDrawingAreaBeginning = build.maybeBuildFinish match {
+                      case Some(buildFinish) => (buildFinish - jobArea.startTime).min(jobArea.length)
+                      case None => jobArea.length
+                    }
+
+                    val buildRectangle = if (endRelativeToDrawingAreaBeginning.toNanos > 0 &&
+                      startRelativeToDrawingAreaBeginning < jobArea.length) {
+
+                      val relativeStartRatio = startRelativeToDrawingAreaBeginning / jobArea.length
+                      val relativeEndRatio = endRelativeToDrawingAreaBeginning / jobArea.length
+
+                      val relativeWidthRatio = relativeEndRatio - relativeStartRatio //todo assert if this is negative, also round up to >10?
+                      val startPx = (jobArea.width * relativeStartRatio).toX
+                      //todo this will go out of the drawing area, fix
+                      val width = 4.wpx.max(jobArea.width * relativeWidthRatio) //todo display these nicely, probably not really a problem
+                      //todo header, colors, hovering, zooming, horizontal lines, click
+
+                      val style: List[TagMod] = List(MyStyles.rectange, build.buildStatus match {
+                        case Created => MyStyles.created
+                        case Pending => MyStyles.pending
+                        case Building => MyStyles.building
+                        case Failed => MyStyles.failed
+                        case Successful => MyStyles.success
+                        case Aborted => MyStyles.aborted
+                        case Unstable => MyStyles.unstable
+                      })
+
+                      val finishString = build.maybeBuildFinish.map(time => s"Finish: $time\n").getOrElse("")
+                      val nonStyle = List(
+                        className := s"build_rect",
+                        //todo add length
+                        //todo replace this with jQuery or sg similar and make it pop up immediately not after delay and not browser dependent way
+                        <.title(s"Id: ${build.buildNumber.i}\nStart: ${build.buildStart}\n${finishString}Status: ${build.buildStatus}")
+                      )
+                      Some(
+                        a(svg.xlinkHref := jobState.static.buildUi(build.buildNumber).rawString,
+                          target := "_blank",
+                          <.rect(nonStyle ++ style: _*)
+                            .x(startPx)
+                            .y(((stripHeight - rectangleHeight) / 2).toY)
+                            .width(width)
+                            .height(rectangleHeight)
+                        )
+                      )
+                    } else
+                      None
+                    buildRectangle.toList
+                  }
+              }
+            }.flatten.flatten.toList
         }
     }
   }
