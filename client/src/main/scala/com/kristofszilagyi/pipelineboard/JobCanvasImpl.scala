@@ -102,7 +102,7 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
   def render(s: State): TagOf[Element] = {
     val windowWidth = s.windowWidth
     val jobAreaWidth = (windowWidth.toX - labelEnd - rightMargin).toW
-    val stripHeight = 30.hpx
+    val stripHeight = 35.hpx
     val generalMargin = 10
     import s.drawingAreaDurationIterator
 

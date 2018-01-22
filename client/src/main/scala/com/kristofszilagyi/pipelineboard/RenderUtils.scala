@@ -144,6 +144,7 @@ object RenderUtils extends LazyLogging {
 
             val slottedBuilds = ParallelJobManager.slotify(ParallelJobManager.overlappingIslands(notSlottedBuilds)).map(_.builds)
             slottedBuilds.flatMap { island =>
+              val numberOfSlots = island.keySet.size
               island.map {
                 case (slot, buildsInSlot) =>
                   buildsInSlot.map { build =>
@@ -182,14 +183,16 @@ object RenderUtils extends LazyLogging {
                         //todo replace this with jQuery or sg similar and make it pop up immediately not after delay and not browser dependent way
                         <.title(s"Id: ${build.buildNumber.i}\nStart: ${build.buildStart}\n${finishString}Status: ${build.buildStatus}")
                       )
+                      val slottedRectangleHeight = rectangleHeight / numberOfSlots
+                      val slottedRectangleY = ((stripHeight - rectangleHeight) / 2).toY + (slottedRectangleHeight * slot.i).toY
                       Some(
                         a(svg.xlinkHref := jobState.static.buildUi(build.buildNumber).rawString,
                           target := "_blank",
                           <.rect(nonStyle ++ style: _*)
                             .x(startPx)
-                            .y(((stripHeight - rectangleHeight) / 2).toY)
+                            .y(slottedRectangleY)
                             .width(width)
-                            .height(rectangleHeight)
+                            .height(slottedRectangleHeight.d.max(1.0).hpx)
                         )
                       )
                     } else
