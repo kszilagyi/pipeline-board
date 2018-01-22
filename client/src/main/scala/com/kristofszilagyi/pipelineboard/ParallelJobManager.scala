@@ -31,13 +31,13 @@ final case class Slot(i: Int)
 final case class SlottedIsland(builds: Map[Slot, List[BuildInfo]])
 
 object ParallelJobManager extends LazyLogging {
-  def overlappingIslands(builds: Traversable[BuildInfo]): Set[Island] = {
+  def overlappingIslands(builds: Traversable[BuildInfo]): Traversable[Island] = {
     val sortedBuilds = builds.toSeq.sortBy(_.buildStart)
-    rec(sortedBuilds, Island.empty, Set.empty)
+    rec(sortedBuilds, Island.empty, Seq.empty)
   }
 
   @tailrec
-  private def rec(remainingSortedBuilds: Seq[BuildInfo], ongoingIsland: Island, finishedIslands: Set[Island]): Set[Island] = {
+  private def rec(remainingSortedBuilds: Seq[BuildInfo], ongoingIsland: Island, finishedIslands: Seq[Island]): Traversable[Island] = {
     remainingSortedBuilds.toList match {
       case head :: tail =>
         val overlaps = ongoingIsland.builds.filter(_.overlap(head))
@@ -45,11 +45,11 @@ object ParallelJobManager extends LazyLogging {
           rec(tail, ongoingIsland.add(head), finishedIslands)
         } else {
           val newFinishedIslands = if (ongoingIsland.isEmpty) finishedIslands
-                         else finishedIslands + ongoingIsland
+                         else finishedIslands :+ ongoingIsland
           rec(tail, Island.of(head), newFinishedIslands)
         }
       case Nil =>
-        finishedIslands + ongoingIsland
+        finishedIslands :+ ongoingIsland
     }
   }
 
@@ -75,7 +75,7 @@ object ParallelJobManager extends LazyLogging {
   }
 
 
-  def slotify(islands: Set[Island]): Set[SlottedIsland] = {
+  def slotify(islands: Traversable[Island]): Traversable[SlottedIsland] = {
     islands.map{ island =>
       recSlotify(island.builds, Map.empty)
     }
