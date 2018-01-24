@@ -168,8 +168,8 @@ final class GitLabCiFetcher(ws: WSClient,
           }
           buildsFut.lift noThrowingMap {
             case Failure(ex) => JobDetails(jobToFetch.common,
-              Some(JobStatus(Left(ResponseError.failedToConnect(jobToFetch.firstPage, ex)), Instant.now())))
-            case Success(builds) => JobDetails(jobToFetch.common, Some(JobStatus(builds, Instant.now())))
+              Some(JobBuilds(Left(ResponseError.failedToConnect(jobToFetch.firstPage, ex)), Instant.now())))
+            case Success(builds) => JobDetails(jobToFetch.common, Some(JobBuilds(builds, Instant.now())))
           }
         }
         result.onComplete { result =>

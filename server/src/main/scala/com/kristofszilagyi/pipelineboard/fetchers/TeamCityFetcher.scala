@@ -50,7 +50,7 @@ final class TeamCityFetcher(ws: WSClient, jobToFetch: TeamCityJob)(implicit ec: 
       val resultInStandardFormat = flattenedResults.map(_.build.map{ tcBuildInfo =>
         Right(BuildInfo(tcBuildInfo.state.toBuildStatus(tcBuildInfo.status), tcBuildInfo.startDate, tcBuildInfo.finishDate, tcBuildInfo.id))
       })
-      val result = FetcherResult(JobDetails(jobToFetch.common, Some(JobStatus(resultInStandardFormat, Instant.now()))))
+      val result = FetcherResult(JobDetails(jobToFetch.common, Some(JobBuilds(resultInStandardFormat, Instant.now()))))
       msg.replyTo ! result
     }
     Behavior.same

@@ -52,7 +52,7 @@ final class MockAutowire extends MockableAutowire {
                     JobType.Jenkins
                   ),
                   Some(
-                    JobStatus(
+                    JobBuilds(
                       Right(Seq(Right(BuildInfo(Successful, Instant.now(), Some(Instant.now()), BuildNumber(1))))),
                       Instant.now()
                     )

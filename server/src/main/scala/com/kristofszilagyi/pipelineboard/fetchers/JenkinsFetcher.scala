@@ -84,7 +84,7 @@ final class JenkinsFetcher(ws: WSClient, jobToFetch: JenkinsJob)(implicit ec: Ex
       }
 
       Utopia.sequence(buildInfoFutures) noThrowingMap { buildInfo =>
-        JobDetails(job.common, Some(JobStatus(Right(buildInfo), Instant.now())))
+        JobDetails(job.common, Some(JobBuilds(Right(buildInfo), Instant.now())))
       }
     }
     val futureResults = job match {
@@ -105,13 +105,13 @@ final class JenkinsFetcher(ws: WSClient, jobToFetch: JenkinsJob)(implicit ec: Ex
           val jobUrl = job.common.jobInfo
           job.authenticatedRestRequest(jobUrl, ws).get.map(safeRead[PartialJobInfo](jobUrl, _)).lift.noThrowingMap{
             case Success(maybePartialJenkinsJobInfo) => maybePartialJenkinsJobInfo match {
-              case Left(error) => Left(JobDetails(job.common, Some(JobStatus(Left(error), Instant.now()))))
+              case Left(error) => Left(JobDetails(job.common, Some(JobBuilds(Left(error), Instant.now()))))
               case Right(jenkinsJobInfo) => Right(JobInfoWithoutBuildInfo(
                 job,
                 jenkinsJobInfo.builds.map(partialBuildInfo => BuildNumber(partialBuildInfo.number))
               ))
             }
-            case Failure(t) => Left(JobDetails(job.common, Some(JobStatus(Left(ResponseError.failedToConnect(jobUrl, t)), Instant.now()))))
+            case Failure(t) => Left(JobDetails(job.common, Some(JobBuilds(Left(ResponseError.failedToConnect(jobUrl, t)), Instant.now()))))
           }
         }
 
