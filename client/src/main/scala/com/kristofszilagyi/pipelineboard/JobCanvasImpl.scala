@@ -110,7 +110,7 @@ final class JobCanvasImpl($: BackendScope[Unit, State], timers: JsTimers, autowi
 
     val colors = NonEmptyList.of("black", "darkslategrey")
 
-    val ciState = s.ciState.cachedResult
+    val ciState = s.ciState.allGroups
     //todo handle if jobs are not fecthed yet
     //todo handle if data is stale
 
@@ -262,7 +262,7 @@ object Canvas {
       14.days, 21.days, 30.days, 45.days, 60.days, 90.days, 120.days, 180.days, 270.days, 365.days).sorted
 
     ScalaComponent.builder[Unit]("Timer")
-      .initialState(State(queryJobWindowWidth(), ResultAndTime(CachedResult(Seq.empty), Instant.now),
+      .initialState(State(queryJobWindowWidth(), ResultAndTime(AllGroups(Seq.empty), Instant.now),
         drawingAreaDurationIterator = BidirectionalIterator(validDurations, 9), //:(
         Instant.now(), mouseDownY = None, endTimeAtMouseDown = Instant.now, followTime = true))
       .backend(new JobCanvasImpl(_, timers, autowire))

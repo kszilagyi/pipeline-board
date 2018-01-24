@@ -121,7 +121,7 @@ object JobType extends Enum[JobType] with CirceEnum[JobType] {
 
 @JsonCodec final case class GroupName(s: String)
 
-object CachedResult {
+object AllGroups {
   implicit val keyDecoder = new KeyDecoder[GroupName] {
     def apply(key: String): Option[GroupName] = Some(GroupName(key))
   }
@@ -129,7 +129,7 @@ object CachedResult {
     def apply(groupName: GroupName): String = groupName.s
   }
 }
-@JsonCodec final case class CachedResult(groups: Seq[(GroupName, JobGroup)])
+@JsonCodec final case class AllGroups(groups: Seq[(GroupName, JobGroup)])
 
-@JsonCodec final case class ResultAndTime(cachedResult: CachedResult, time: Instant)
+@JsonCodec final case class ResultAndTime(allGroups: AllGroups, time: Instant)
 

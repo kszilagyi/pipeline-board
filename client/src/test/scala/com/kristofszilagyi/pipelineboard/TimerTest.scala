@@ -41,7 +41,7 @@ final class MockAutowire extends MockableAutowire {
   def dataFeed(): Future[ResultAndTime] = {
     Future.successful(
       ResultAndTime(
-        CachedResult(
+        AllGroups(
           Seq(
             GroupName("name") ->
             JobGroup(
