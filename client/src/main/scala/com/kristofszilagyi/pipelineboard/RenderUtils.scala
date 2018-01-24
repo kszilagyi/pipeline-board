@@ -116,7 +116,7 @@ object RenderUtils extends LazyLogging {
   }
 
   def jobRectanges(jobState: JobDetails, jobArea: JobArea, rectangleHeight: HPixel, stripHeight: HPixel): Seq[TagOf[SVGElement]] = {
-    jobState.maybeDynamic match {
+    jobState.builds match {
       case None =>
         List(<.text(
           ^.fill := "red",
@@ -186,7 +186,7 @@ object RenderUtils extends LazyLogging {
                       val slottedRectangleHeight = rectangleHeight / numberOfSlots
                       val slottedRectangleY = ((stripHeight - rectangleHeight) / 2).toY + (slottedRectangleHeight * slot.i).toY
                       Some(
-                        a(svg.xlinkHref := jobState.static.buildUi(build.buildNumber).rawString,
+                        a(svg.xlinkHref := jobState.desc.buildUi(build.buildNumber).rawString,
                           target := "_blank",
                           <.rect(nonStyle ++ style: _*)
                             .x(startPx)
@@ -218,7 +218,7 @@ object RenderUtils extends LazyLogging {
   def labels(groups: Seq[(GroupName, JobGroup)], anchor: TextAnchor, stripHeight: HPixel, position: XPixel): ArrangeResult = {
     val unpositionedLabels = groups.toList.flatMap { case (groupName, group) =>
       group.jobs.zipWithIndex.map { case (jobState, idxWithinGroup) =>
-        val numberOfErrors = jobState.maybeDynamic.map(_.r.getOrElse(Seq.empty).map(_.isLeft).count(_ ==== true)).getOrElse(0)
+        val numberOfErrors = jobState.builds.map(_.r.getOrElse(Seq.empty).map(_.isLeft).count(_ ==== true)).getOrElse(0)
         val warningMsg = if (numberOfErrors > 0) {
           "\u26A0 "
         } else ""
@@ -233,12 +233,12 @@ object RenderUtils extends LazyLogging {
               warningMsg,
             ),
             a(
-              svg.xlinkHref := jobState.static.urls.userRoot.u.rawString,
+              svg.xlinkHref := jobState.desc.urls.userRoot.u.rawString,
               target := "_blank",
               <.tspan(
                 textDecoration := "underline",
                 ^.fill := "black",
-                jobState.static.name.s
+                jobState.desc.name.s
               )
             ),
           )
