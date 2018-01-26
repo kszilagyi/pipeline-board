@@ -14,6 +14,7 @@ import io.circe.generic.JsonCodec
 import slogging.LazyLogging
 import TypeSafeEqualsOps._
 import com.kristofszilagyi.pipelineboard.FetcherResult
+import com.kristofszilagyi.pipelineboard.actors.{FetchedJobBuilds}
 import com.kristofszilagyi.pipelineboard.controllers.{JenkinsAccessToken, JenkinsUser}
 
 import scala.concurrent.ExecutionContext
@@ -51,7 +52,7 @@ object JenkinsFetcher {
   sealed trait JenkinsFetcherIncoming
 
   final case class JobsInfoWithoutBuildInfo(replyTo: ActorRef[FetcherResult],
-                                                    results: Seq[Either[JobDetails, JenkinsFetcher.JobInfoWithoutBuildInfo]]) extends JenkinsFetcherIncoming
+                                                    results: Seq[Either[FetcherResult, JenkinsFetcher.JobInfoWithoutBuildInfo]]) extends JenkinsFetcherIncoming
 
   //todo move out from here
   final case class Fetch(replyTo: ActorRef[FetcherResult]) extends JenkinsFetcherIncoming
@@ -64,7 +65,7 @@ object JenkinsFetcher {
 final class JenkinsFetcher(ws: WSClient, jobToFetch: JenkinsJob)(implicit ec: ExecutionContext) extends LazyLogging with Fetcher {
   import JenkinsJson.{PartialDetailedBuildInfo, PartialJobInfo}
 
-  private def fetchDetailedInfo(replyTo: ActorRef[FetcherResult], job: Either[JobDetails, JenkinsFetcher.JobInfoWithoutBuildInfo]) {
+  private def fetchDetailedInfo(replyTo: ActorRef[FetcherResult], job: Either[FetcherResult, JenkinsFetcher.JobInfoWithoutBuildInfo]) {
     def fetchBuildResults(job: JenkinsJob, buildNumbers: Seq[BuildNumber]) = {
       val buildInfoFutures = buildNumbers.map { buildNumber =>
         val destination = job.common.buildInfo(buildNumber)
@@ -78,13 +79,13 @@ final class JenkinsFetcher(ws: WSClient, jobToFetch: JenkinsJob)(implicit ec: Ex
               startTime, endTime, buildNumber)
           }
         ).lift noThrowingMap  {
-          case Failure(exception) => Left(ResponseError.failedToConnect(destination, exception))
-          case Success(value) => value
+          case Failure(exception) => buildNumber -> Left(ResponseError.failedToConnect(destination, exception))
+          case Success(value) => buildNumber-> value
         }
       }
 
       Utopia.sequence(buildInfoFutures) noThrowingMap { buildInfo =>
-        JobDetails(job.common, Some(JobBuilds(Right(buildInfo), Instant.now())))
+        FetcherResult(job.common, FetchedJobBuilds(Right(buildInfo.toMap), Instant.now()))
       }
     }
     val futureResults = job match {
@@ -93,7 +94,7 @@ final class JenkinsFetcher(ws: WSClient, jobToFetch: JenkinsJob)(implicit ec: Ex
         fetchBuildResults(j, buildNumbers)
     }
     futureResults onComplete {
-      replyTo ! FetcherResult(_)
+      replyTo ! _
     }
   }
 
@@ -105,13 +106,13 @@ final class JenkinsFetcher(ws: WSClient, jobToFetch: JenkinsJob)(implicit ec: Ex
           val jobUrl = job.common.jobInfo
           job.authenticatedRestRequest(jobUrl, ws).get.map(safeRead[PartialJobInfo](jobUrl, _)).lift.noThrowingMap{
             case Success(maybePartialJenkinsJobInfo) => maybePartialJenkinsJobInfo match {
-              case Left(error) => Left(JobDetails(job.common, Some(JobBuilds(Left(error), Instant.now()))))
+              case Left(error) => Left(FetcherResult(job.common, FetchedJobBuilds(Left(error), Instant.now())))
               case Right(jenkinsJobInfo) => Right(JobInfoWithoutBuildInfo(
                 job,
                 jenkinsJobInfo.builds.map(partialBuildInfo => BuildNumber(partialBuildInfo.number))
               ))
             }
-            case Failure(t) => Left(JobDetails(job.common, Some(JobBuilds(Left(ResponseError.failedToConnect(jobUrl, t)), Instant.now()))))
+            case Failure(t) => Left(FetcherResult(job.common, FetchedJobBuilds(Left(ResponseError.failedToConnect(jobUrl, t)), Instant.now())))
           }
         }
 

@@ -18,7 +18,7 @@ class Heartbeat(fetcher: ActorRef[Fetch], cache: ActorRef[OneFetchFinished]) ext
 
   private def ongoingBehaviour: Actor.Immutable[FetcherResult] =
     Actor.immutable[FetcherResult] { case (ctx, msg) =>
-      cache ! OneFetchFinished(msg.result)
+      cache ! OneFetchFinished(msg.desc, msg.builds)
       discard(ctx.schedule(1.minutes, fetcher, Fetch(ctx.self)))
       Actor.same
     }

@@ -115,7 +115,7 @@ object JobType extends Enum[JobType] with CirceEnum[JobType] {
 
 @JsonCodec final case class JobBuilds(r: Either[ResponseError, Seq[scala.Either[ResponseError, BuildInfo]]], resultTime: Instant)
 
-@JsonCodec final case class JobDetails(desc: Job, builds: JobBuilds)
+@JsonCodec final case class JobDetails(jobDescription: Job, builds: JobBuilds)
 
 @JsonCodec final case class JobGroup(jobs: Seq[JobDetails])
 

@@ -1,6 +1,7 @@
 package com.kristofszilagyi.pipelineboard
 
-import com.kristofszilagyi.pipelineboard.shared.{JobDetails, RawUrl, ResponseError, Wart}
+import com.kristofszilagyi.pipelineboard.actors.FetchedJobBuilds
+import com.kristofszilagyi.pipelineboard.shared._
 import io.circe.Decoder
 import play.api.libs.ws.WSResponse
 import com.kristofszilagyi.pipelineboard.shared.TypeSafeEqualsOps._
@@ -16,4 +17,4 @@ package object fetchers {
 
 }
 
-final case class FetcherResult(result: JobDetails)
+final case class FetcherResult(desc: Job, builds: FetchedJobBuilds)

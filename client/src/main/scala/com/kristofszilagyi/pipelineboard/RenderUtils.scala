@@ -116,92 +116,83 @@ object RenderUtils extends LazyLogging {
   }
 
   def jobRectanges(jobState: JobDetails, jobArea: JobArea, rectangleHeight: HPixel, stripHeight: HPixel): Seq[TagOf[SVGElement]] = {
-    jobState.builds match {
-      case None =>
+    jobState.builds.r match {
+      case Left(err) =>
         List(<.text(
           ^.fill := "red",
           alignmentBaseline := alignmentBaselineMiddle,
-          "No data yet"
-        ).y(stripHeight.toY / 2)
-        )
-      case Some(dynamic) =>
-        dynamic.r match {
-          case Left(err) =>
-            List(<.text(
-              ^.fill := "red",
-              alignmentBaseline := alignmentBaselineMiddle,
-              err.s.replaceAll("\n", " "),
-              <.title(err.s)
-            ).y(stripHeight.toY / 2), <.title(err.s))
-          case Right(runs) =>
-            val notSlottedBuilds = runs.flatMap(either => either match {
-              case Right(build) =>
-                List(build)
-              case Left(error) =>
-                logger.warn(s"Build failed to query: ${error.s}")
-                None.toList
-            })
+          err.s.replaceAll("\n", " "),
+          <.title(err.s)
+        ).y(stripHeight.toY / 2), <.title(err.s))
+      case Right(runs) =>
+        val notSlottedBuilds = runs.flatMap(either => either match {
+          case Right(build) =>
+            List(build)
+          case Left(error) =>
+            logger.warn(s"Build failed to query: ${error.s}")
+            None.toList
+        })
 
-            val slottedBuilds = ParallelJobManager.slotify(ParallelJobManager.overlappingIslands(notSlottedBuilds)).map(_.builds)
-            slottedBuilds.flatMap { island =>
-              val numberOfSlots = island.keySet.size
-              island.map {
-                case (slot, buildsInSlot) =>
-                  buildsInSlot.map { build =>
-                    val startRelativeToDrawingAreaBeginning = (build.buildStart - jobArea.startTime).max(0.seconds)
-                    val endRelativeToDrawingAreaBeginning = build.maybeBuildFinish match {
-                      case Some(buildFinish) => (buildFinish - jobArea.startTime).min(jobArea.length)
-                      case None => jobArea.length
-                    }
+        val slottedBuilds = ParallelJobManager.slotify(ParallelJobManager.overlappingIslands(notSlottedBuilds)).map(_.builds)
+        slottedBuilds.flatMap { island =>
+          val numberOfSlots = island.keySet.size
+          island.map {
+            case (slot, buildsInSlot) =>
+              buildsInSlot.map { build =>
+                val startRelativeToDrawingAreaBeginning = (build.buildStart - jobArea.startTime).max(0.seconds)
+                val endRelativeToDrawingAreaBeginning = build.maybeBuildFinish match {
+                  case Some(buildFinish) => (buildFinish - jobArea.startTime).min(jobArea.length)
+                  case None => jobArea.length
+                }
 
-                    val buildRectangle = if (endRelativeToDrawingAreaBeginning.toNanos > 0 &&
-                      startRelativeToDrawingAreaBeginning < jobArea.length) {
+                val buildRectangle = if (endRelativeToDrawingAreaBeginning.toNanos > 0 &&
+                  startRelativeToDrawingAreaBeginning < jobArea.length) {
 
-                      val relativeStartRatio = startRelativeToDrawingAreaBeginning / jobArea.length
-                      val relativeEndRatio = endRelativeToDrawingAreaBeginning / jobArea.length
+                  val relativeStartRatio = startRelativeToDrawingAreaBeginning / jobArea.length
+                  val relativeEndRatio = endRelativeToDrawingAreaBeginning / jobArea.length
 
-                      val relativeWidthRatio = relativeEndRatio - relativeStartRatio //todo assert if this is negative, also round up to >10?
-                      val startPx = (jobArea.width * relativeStartRatio).toX
-                      //todo this will go out of the drawing area, fix
-                      val width = 4.wpx.max(jobArea.width * relativeWidthRatio) //todo display these nicely, probably not really a problem
-                      //todo header, colors, hovering, zooming, horizontal lines, click
+                  val relativeWidthRatio = relativeEndRatio - relativeStartRatio //todo assert if this is negative, also round up to >10?
+                  val startPx = (jobArea.width * relativeStartRatio).toX
+                  //todo this will go out of the drawing area, fix
+                  val width = 4.wpx.max(jobArea.width * relativeWidthRatio) //todo display these nicely, probably not really a problem
+                  //todo header, colors, hovering, zooming, horizontal lines, click
 
-                      val style: List[TagMod] = List(MyStyles.rectange, build.buildStatus match {
-                        case Created => MyStyles.created
-                        case Pending => MyStyles.pending
-                        case Building => MyStyles.building
-                        case Failed => MyStyles.failed
-                        case Successful => MyStyles.success
-                        case Aborted => MyStyles.aborted
-                        case Unstable => MyStyles.unstable
-                      })
+                  val style: List[TagMod] = List(MyStyles.rectange, build.buildStatus match {
+                    case Created => MyStyles.created
+                    case Pending => MyStyles.pending
+                    case Building => MyStyles.building
+                    case Failed => MyStyles.failed
+                    case Successful => MyStyles.success
+                    case Aborted => MyStyles.aborted
+                    case Unstable => MyStyles.unstable
+                  })
 
-                      val finishString = build.maybeBuildFinish.map(time => s"Finish: $time\n").getOrElse("")
-                      val nonStyle = List(
-                        className := s"build_rect",
-                        //todo add length
-                        //todo replace this with jQuery or sg similar and make it pop up immediately not after delay and not browser dependent way
-                        <.title(s"Id: ${build.buildNumber.i}\nStart: ${build.buildStart}\n${finishString}Status: ${build.buildStatus}")
-                      )
-                      val slottedRectangleHeight = rectangleHeight / numberOfSlots
-                      val slottedRectangleY = ((stripHeight - rectangleHeight) / 2).toY + (slottedRectangleHeight * slot.i).toY
-                      Some(
-                        a(svg.xlinkHref := jobState.desc.buildUi(build.buildNumber).rawString,
-                          target := "_blank",
-                          <.rect(nonStyle ++ style: _*)
-                            .x(startPx)
-                            .y(slottedRectangleY)
-                            .width(width)
-                            .height(slottedRectangleHeight.d.max(1.0).hpx)
-                        )
-                      )
-                    } else
-                      None
-                    buildRectangle.toList
-                  }
+                  val finishString = build.maybeBuildFinish.map(time => s"Finish: $time\n").getOrElse("")
+                  val nonStyle = List(
+                    className := s"build_rect",
+                    //todo add length
+                    //todo replace this with jQuery or sg similar and make it pop up immediately not after delay and not browser dependent way
+                    <.title(s"Id: ${build.buildNumber.i}\nStart: ${build.buildStart}\n${finishString}Status: ${build.buildStatus}")
+                  )
+                  val slottedRectangleHeight = rectangleHeight / numberOfSlots
+                  val slottedRectangleY = ((stripHeight - rectangleHeight) / 2).toY + (slottedRectangleHeight * slot.i).toY
+                  Some(
+                    a(svg.xlinkHref := jobState.jobDescription.buildUi(build.buildNumber).rawString,
+                      target := "_blank",
+                      <.rect(nonStyle ++ style: _*)
+                        .x(startPx)
+                        .y(slottedRectangleY)
+                        .width(width)
+                        .height(slottedRectangleHeight.d.max(1.0).hpx)
+                    )
+                  )
+                } else
+                  None
+                buildRectangle.toList
               }
-            }.flatten.flatten.toList
-        }
+          }
+        }.flatten.flatten.toList
+
     }
   }
 
@@ -218,7 +209,7 @@ object RenderUtils extends LazyLogging {
   def labels(groups: Seq[(GroupName, JobGroup)], anchor: TextAnchor, stripHeight: HPixel, position: XPixel): ArrangeResult = {
     val unpositionedLabels = groups.toList.flatMap { case (groupName, group) =>
       group.jobs.zipWithIndex.map { case (jobState, idxWithinGroup) =>
-        val numberOfErrors = jobState.builds.map(_.r.getOrElse(Seq.empty).map(_.isLeft).count(_ ==== true)).getOrElse(0)
+        val numberOfErrors = jobState.builds.r.getOrElse(Seq.empty).map(_.isLeft).count(_ ==== true)
         val warningMsg = if (numberOfErrors > 0) {
           "\u26A0 "
         } else ""
@@ -233,12 +224,12 @@ object RenderUtils extends LazyLogging {
               warningMsg,
             ),
             a(
-              svg.xlinkHref := jobState.desc.urls.userRoot.u.rawString,
+              svg.xlinkHref := jobState.jobDescription.urls.userRoot.u.rawString,
               target := "_blank",
               <.tspan(
                 textDecoration := "underline",
                 ^.fill := "black",
-                jobState.desc.name.s
+                jobState.jobDescription.name.s
               )
             ),
           )

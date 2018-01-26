@@ -5,6 +5,7 @@ import java.time.Instant
 import akka.typed.Behavior
 import akka.typed.scaladsl.Actor
 import com.kristofszilagyi.pipelineboard.FetcherResult
+import com.kristofszilagyi.pipelineboard.actors.FetchedJobBuilds
 import com.kristofszilagyi.pipelineboard.fetchers.JenkinsFetcher.Fetch
 import com.kristofszilagyi.pipelineboard.fetchers.TeamCityFetcher.TCPartialBuildsInfo
 import com.kristofszilagyi.pipelineboard.shared._
@@ -48,9 +49,9 @@ final class TeamCityFetcher(ws: WSClient, jobToFetch: TeamCityJob)(implicit ec: 
         case Success(value) => value
       }
       val resultInStandardFormat = flattenedResults.map(_.build.map{ tcBuildInfo =>
-        Right(BuildInfo(tcBuildInfo.state.toBuildStatus(tcBuildInfo.status), tcBuildInfo.startDate, tcBuildInfo.finishDate, tcBuildInfo.id))
-      })
-      val result = FetcherResult(JobDetails(jobToFetch.common, Some(JobBuilds(resultInStandardFormat, Instant.now()))))
+        tcBuildInfo.id -> Right(BuildInfo(tcBuildInfo.state.toBuildStatus(tcBuildInfo.status), tcBuildInfo.startDate, tcBuildInfo.finishDate, tcBuildInfo.id))
+      }.toMap)
+      val result = FetcherResult(jobToFetch.common, FetchedJobBuilds(resultInStandardFormat, Instant.now()))
       msg.replyTo ! result
     }
     Behavior.same

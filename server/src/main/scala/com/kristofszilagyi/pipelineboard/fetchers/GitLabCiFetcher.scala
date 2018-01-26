@@ -14,6 +14,7 @@ import GitLabCiFetcher._
 import TypeSafeEqualsOps.AnyOps
 import cats.implicits._
 import com.kristofszilagyi.pipelineboard.FetcherResult
+import com.kristofszilagyi.pipelineboard.actors.FetchedJobBuilds
 import com.kristofszilagyi.pipelineboard.fetchers.JenkinsFetcher.Fetch
 import com.kristofszilagyi.pipelineboard.utils.Utopia.RichFuture
 import com.kristofszilagyi.pipelineboard.utils.UriOps.RichUriObj
@@ -151,7 +152,7 @@ final class GitLabCiFetcher(ws: WSClient,
   def behaviour: Actor.Immutable[Fetch] = Actor.immutable[Fetch] { (_, msg) =>
     msg match {
       case Fetch(replyTo) =>
-        val result = {
+        val resultFut = {
           val last1000BuildsForProjectFut = queryLast1000Builds(logger, jobToFetch, ws)
           val buildsWithRightNameFut = last1000BuildsForProjectFut.map{ last1000BuildsForProject =>
             last1000BuildsForProject.map(_.filter(_.name ==== jobToFetch.jobNameOnGitLab.s))
@@ -160,20 +161,20 @@ final class GitLabCiFetcher(ws: WSClient,
             buildsWithRightName.map(_.flatMap { build =>
               build.status match {
                 case status: DisplayableGitLabCiStatus =>
-                  build.started_at.map(start => Right(BuildInfo(status.toBuildStatus, buildStart = start,
+                  build.started_at.map(start =>  build.buildNumber -> Right(BuildInfo(status.toBuildStatus, buildStart = start,
                     maybeBuildFinish = build.finished_at, build.buildNumber))).toList
                 case _ => None.toList
               }
-            })
+            }.toMap)
           }
           buildsFut.lift noThrowingMap {
-            case Failure(ex) => JobDetails(jobToFetch.common,
-              Some(JobBuilds(Left(ResponseError.failedToConnect(jobToFetch.firstPage, ex)), Instant.now())))
-            case Success(builds) => JobDetails(jobToFetch.common, Some(JobBuilds(builds, Instant.now())))
+            case Failure(ex) => FetcherResult(jobToFetch.common,
+              FetchedJobBuilds(Left(ResponseError.failedToConnect(jobToFetch.firstPage, ex)), Instant.now()))
+            case Success(builds) => FetcherResult(jobToFetch.common, FetchedJobBuilds(builds, Instant.now()))
           }
         }
-        result.onComplete { result =>
-          replyTo ! FetcherResult(result)
+        resultFut.onComplete { result =>
+          replyTo ! result
         }
         Actor.same
     }
