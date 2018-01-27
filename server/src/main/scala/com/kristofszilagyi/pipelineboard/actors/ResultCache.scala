@@ -4,12 +4,16 @@ import java.time.Instant
 
 import akka.typed.scaladsl.Actor
 import akka.typed.{ActorRef, Behavior}
+import com.kristofszilagyi.pipelineboard.actors.ResultCache.writeToDb
+import com.kristofszilagyi.pipelineboard.db.BuildsDb.{BuildRow, buildsQuery}
 import com.kristofszilagyi.pipelineboard.fetchers.Fetcher
 import com.kristofszilagyi.pipelineboard.shared.TypeSafeEqualsOps._
+import com.kristofszilagyi.pipelineboard.shared.Wart.discard
 import com.kristofszilagyi.pipelineboard.shared._
+import slick.jdbc.SQLiteProfile
 import slogging.LazyLogging
 
-import scala.collection.immutable.{ListMap, Queue}
+import scala.collection.immutable.ListMap
 
 sealed trait ResultCacheIncoming
 final case class FetchCached(parent: ActorRef[AllGroups]) extends ResultCacheIncoming
@@ -43,7 +47,18 @@ final case class CachedJobDetails(desc: Job, maybeError: Option[ResponseError],
 }
 final case class CachedResult(groups: Seq[(GroupName, Seq[CachedJobDetails])])
 
-final class ResultCache(jobGroups: ListMap[GroupName, Seq[Job]], fetchers: Traversable[Fetcher]) extends LazyLogging {
+object ResultCache {
+  private def writeToDb(db: SQLiteProfile.backend.DatabaseDef, fetch: OneFetchFinished): Unit = {
+    import SQLiteProfile.api._
+    val name = fetch.desc.name
+    val builds = fetch.builds.r.getOrElse(Map.empty).values.flatMap(_.toOption.toList)
+    val dbRows = builds.map(b => BuildRow(name, b.buildNumber, b.buildStatus, b.buildStart, b.maybeBuildFinish))
+    val upserts = dbRows.map(buildsQuery.insertOrUpdate(_))
+    discard(db.run(DBIO.sequence(upserts))) //fire and forget
+  }
+}
+
+final class ResultCache(db: SQLiteProfile.backend.DatabaseDef ,jobGroups: ListMap[GroupName, Seq[Job]], fetchers: Traversable[Fetcher], buildsInDb: Seq[BuildRow]) extends LazyLogging {
   val behaviour: Behavior[ResultCacheIncoming] = {
     Actor.deferred { ctx =>
       fetchers.foreach{ fetcher =>
@@ -75,6 +90,7 @@ final class ResultCache(jobGroups: ListMap[GroupName, Seq[Job]], fetchers: Trave
               )
               Actor.same
             case newResult: OneFetchFinished =>
+              writeToDb(db, newResult)
               val newCache = cache.groups.map {case (name, group) =>
                 name -> group.map{ jobDetails =>
                   if (jobDetails.desc ==== newResult.desc) {
@@ -91,7 +107,12 @@ final class ResultCache(jobGroups: ListMap[GroupName, Seq[Job]], fetchers: Trave
       }
 
       val initialCache = jobGroups.map{case (groupName, jobs) =>
-        groupName -> jobs.map(CachedJobDetails(_, maybeError = None, Map.empty, Instant.MIN))
+        groupName -> jobs.map { job =>
+          val buildInfos = buildsInDb.filter(_.name ==== job.name).map{ build =>
+            build.buildNumber -> Right(BuildInfo(build.buildStatus, build.buildStart, build.maybeBuildFinish, build.buildNumber))
+          }.toMap
+          CachedJobDetails(job, maybeError = None, builds = buildInfos, latestUpdate = Instant.MIN)
+        }
       }
       b(CachedResult(initialCache.toSeq))
     }

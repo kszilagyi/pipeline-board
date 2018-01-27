@@ -57,7 +57,11 @@ object Settings {
     "biz.enef" %% "slogging-slf4j" % "0.5.2",
     "org.slf4j" % "slf4j-simple" % "1.7.+",
     "net.jcazevedo" %% "moultingyaml" % "0.4.0",
-    guice, ws
+    guice, ws,
+    "com.typesafe.slick" %% "slick" % "3.2.1",
+    "org.slf4j" % "slf4j-nop" % "1.6.4",
+    "com.typesafe.slick" %% "slick-hikaricp" % "3.2.1",
+    "org.xerial" % "sqlite-jdbc" % "3.21.0.1"
   ))
 
   /** Dependencies only used by the JS project (note the use of %%% instead of %%) */

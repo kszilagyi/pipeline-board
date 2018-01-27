@@ -1,27 +1,27 @@
 package com.kristofszilagyi.pipelineboard.controllers
 
 import java.io.File
-import java.net.URLEncoder
 import javax.inject._
 
 import com.kristofszilagyi.pipelineboard.actors.ResultCache
+import com.kristofszilagyi.pipelineboard.db.BuildsDb.buildsQuery
 import com.kristofszilagyi.pipelineboard.fetchers._
 import com.kristofszilagyi.pipelineboard.shared.CssSettings.settings._
 import com.kristofszilagyi.pipelineboard.shared.JobType.{GitLabCi, Jenkins, TeamCity}
+import com.kristofszilagyi.pipelineboard.shared.TypeSafeEqualsOps._
+import com.kristofszilagyi.pipelineboard.shared.Wart.discard
 import com.kristofszilagyi.pipelineboard.shared._
+import com.kristofszilagyi.pipelineboard.utils.GitLabUrls
 import com.netaporter.uri.{EmptyQueryString, PathPart}
 import net.jcazevedo.moultingyaml.PimpedString
 import play.api.Configuration
 import play.api.libs.ws.WSClient
 import play.api.mvc._
-import com.netaporter.uri.dsl._
 import slogging.{LazyLogging, LoggerConfig, PrintLoggerFactory}
-import TypeSafeEqualsOps._
-import Application._
-import com.kristofszilagyi.pipelineboard.utils.GitLabUrls
 
 import scala.collection.immutable.{ListMap, ListSet}
-import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, ExecutionContext}
 import scala.io.Source
 
 object Application {
@@ -104,7 +104,22 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
     val jobsForCache = groupedJobs.map{case (name, (jenkins, gitlab, teamCity)) =>
         name -> (jenkins.map(_.common) ++ gitlab.map(_.common) ++ teamCity.map(_.common))
     }
-    val resultCache = new ResultCache(jobsForCache, fetchers)
+    import slick.jdbc.SQLiteProfile.api._
+
+    val db = Database.forURL("jdbc:sqlite:./db.sqlite")
+    val createTable =
+      sqlu"""CREATE TABLE IF NOT EXISTS builds(
+               name VARCHAR NOT NULL,
+               buildNumber INTEGER NOT NULL,
+               buildStatus VARCHAR NOT NULL,
+               buildStart INTEGER NOT NULL,
+               maybeBuildFinish INTEGER,
+               PRIMARY KEY(name, buildNumber)
+             )
+        """
+    discard(Await.result(db.run(createTable), 1.seconds))
+    val dataInDb = Await.result(db.run(buildsQuery.result), 10.seconds)
+    val resultCache = new ResultCache(db, jobsForCache, fetchers, dataInDb)
     new AutowireServer(new AutowireApiImpl(resultCache))
   }
 
