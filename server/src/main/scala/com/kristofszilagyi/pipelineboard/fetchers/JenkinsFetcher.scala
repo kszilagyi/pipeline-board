@@ -69,19 +69,14 @@ final class JenkinsFetcher(ws: WSClient, jobToFetch: JenkinsJob)(implicit ec: Ex
     def fetchBuildResults(job: JenkinsJob, buildNumbers: Seq[BuildNumber]) = {
       val buildInfoFutures = buildNumbers.map { buildNumber =>
         val destination = job.common.buildInfo(buildNumber)
-        job.authenticatedRestRequest(destination, ws).get.map(result =>
-          if (result.status ==== 404) {
-            Right(BuildInfo(BuildStatus.Aborted, Instant.MIN, Some(Instant.MIN), buildNumber)) //Hack to not show deleted jobs
-          } else {
-            safeRead[PartialDetailedBuildInfo](destination, result)
-              .map { buildInfo =>
-                val buildStatus = buildInfo.result.getOrElse(JenkinsBuildStatus.Building).toBuildStatus
-                val startTime = Instant.ofEpochMilli(buildInfo.timestamp)
-                val endTime = if (buildStatus !=== BuildStatus.Building) Some(startTime.plusMillis(buildInfo.duration.toLong))
-                              else None
-                BuildInfo(buildStatus,
-                  startTime, endTime, buildNumber)
-              }
+        job.authenticatedRestRequest(destination, ws).get.map(result => safeRead[PartialDetailedBuildInfo](destination, result)
+          .map { buildInfo =>
+            val buildStatus = buildInfo.result.getOrElse(JenkinsBuildStatus.Building).toBuildStatus
+            val startTime = Instant.ofEpochMilli(buildInfo.timestamp)
+            val endTime = if (buildStatus !=== BuildStatus.Building) Some(startTime.plusMillis(buildInfo.duration.toLong))
+            else None
+            BuildInfo(buildStatus,
+              startTime, endTime, buildNumber)
           }
         ).lift noThrowingMap  {
           case Failure(exception) => buildNumber -> Left(ResponseError.failedToConnect(destination, exception))
