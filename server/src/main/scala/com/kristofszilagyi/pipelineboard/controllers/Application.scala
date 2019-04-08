@@ -94,7 +94,7 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
     val gitLabJobs = groupedJobs.toList.flatMap(_._2._2)
     val teamCityJobs = groupedJobs.toList.flatMap(_._2._3)
     val fetchers =
-      jenkinsJobs.map(new JenkinsFetcher(wsClient, _)) ++ gitLabJobs.map(new GitLabCiFetcher(wsClient, _)) ++
+      jenkinsJobs.map(new JenkinsFetcher(wsClient, _)) ++ gitLabJobs.map(new GitLabCiFetcher(wsClient, _, jobConfig.gitlabNumberOfBuildPagesToQuery.getOrElse(10))) ++
         teamCityJobs.map(new TeamCityFetcher(wsClient, _))
 
     val jobs = jenkinsJobs.map(_.common) ++ gitLabJobs.map(_.common)
@@ -119,7 +119,7 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
         """
     discard(Await.result(db.run(createTable), 1.seconds))
     val dataInDb = Await.result(db.run(buildsQuery.result), 10.seconds)
-    val resultCache = new ResultCache(db, jobsForCache, fetchers, dataInDb)
+    val resultCache = new ResultCache(db, jobsForCache, jobConfig.fetchFrequencyInMinutes.getOrElse(1.minute), fetchers, dataInDb)
     new AutowireServer(new AutowireApiImpl(resultCache))
   }
 
