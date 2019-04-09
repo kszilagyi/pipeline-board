@@ -140,21 +140,21 @@ object GitLabCiFetcher {
     }
   }
 
-  def queryLast1000Builds(logger: Logger, job: GitLabCiJob, ws: WSClient)
-                         (implicit ec: ExecutionContext): Future[Either[ResponseError, PartialJobsInfo]] = {
-    queryOnePage(logger, job, job.firstPage, ws, pagesToQuery = 10)
+  def queryLastNBuildPages(logger: Logger, job: GitLabCiJob, ws: WSClient, pagesToQuery: Int)
+                          (implicit ec: ExecutionContext): Future[Either[ResponseError, PartialJobsInfo]] = {
+    queryOnePage(logger, job, job.firstPage, ws, pagesToQuery = pagesToQuery)
   }
 
 }
 //todo probably this should be a future....
-final class GitLabCiFetcher(ws: WSClient,
-                            jobToFetch: GitLabCiJob)(implicit ec: ExecutionContext) extends LazyLogging with Fetcher {
+final class GitLabCiFetcher(ws: WSClient, jobToFetch: GitLabCiJob,
+                            buildPagesToQuery: Int)(implicit ec: ExecutionContext) extends LazyLogging with Fetcher {
   def behaviour: Actor.Immutable[Fetch] = Actor.immutable[Fetch] { (_, msg) =>
     msg match {
       case Fetch(replyTo) =>
         val resultFut = {
-          val last1000BuildsForProjectFut = queryLast1000Builds(logger, jobToFetch, ws)
-          val buildsWithRightNameFut = last1000BuildsForProjectFut.map{ last1000BuildsForProject =>
+          val lastNBuildPagesForProjectFut = queryLastNBuildPages(logger, jobToFetch, ws, buildPagesToQuery)
+          val buildsWithRightNameFut = lastNBuildPagesForProjectFut.map{ last1000BuildsForProject =>
             last1000BuildsForProject.map(_.filter(_.name ==== jobToFetch.jobNameOnGitLab.s))
           }
           val buildsFut = buildsWithRightNameFut.map{ buildsWithRightName =>
