@@ -119,7 +119,7 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
         """
     discard(Await.result(db.run(createTable), 1.seconds))
     val dataInDb = Await.result(db.run(buildsQuery.result), 10.seconds)
-    val resultCache = new ResultCache(db, jobsForCache, jobConfig.fetchFrequencyInMinutes.getOrElse(1.minute), fetchers, dataInDb)
+    val resultCache = new ResultCache(db, jobsForCache, jobConfig.fetchFrequency.getOrElse(1.minute), fetchers, dataInDb)
     new AutowireServer(new AutowireApiImpl(resultCache))
   }
 

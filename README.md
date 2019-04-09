@@ -36,6 +36,8 @@ Currently supports the following CI servers:
 ## Example config with all possible options
 ```yaml
 title: Example projects
+fetchFrequencyInMinutes: 10 # optional
+gitlabNumberOfBuildPagesToQuery: 5 # optional
 groups:
   - groupName: First group
     jenkins:

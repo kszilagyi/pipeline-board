@@ -9,7 +9,7 @@ import com.netaporter.uri.config.UriConfig
 import com.netaporter.uri.decoding.NoopDecoder
 import com.netaporter.uri.encoding.NoopEncoder
 
-import scala.concurrent.duration.{FiniteDuration, MINUTES, DurationInt}
+import scala.concurrent.duration.{FiniteDuration, NANOSECONDS}
 
 object JobConfig {
 
@@ -20,7 +20,7 @@ object JobConfig {
   implicit val urlRestFormat: YamlFormat[RestRoot] = wrappedYamlString(s => RestRoot(RawUrl(Uri.parse(s))))(_.u.rawString)
   implicit val groupNameFormat: YamlFormat[GroupName] = wrappedYamlString(GroupName.apply)(_.s)
 
-  implicit val finiteDurationFormat: YamlFormat[FiniteDuration] = wrappedYamlNumber(n => FiniteDuration.apply(n.longValue(), MINUTES))(_.toMinutes)
+  implicit val finiteDurationFormat: YamlFormat[FiniteDuration] = wrappedYamlNumber(n => FiniteDuration.apply(n.longValue(), NANOSECONDS))(_.toNanos)
 }
 
 object JenkinsAccessToken {
@@ -86,4 +86,4 @@ final case class ConfigGroup(groupName: GroupName, jenkins: Option[JenkinsConfig
 object Config {
   implicit val format: YamlFormat[Config] = yamlFormat4(Config.apply)
 }
-final case class Config(title: String, groups: Seq[ConfigGroup], fetchFrequencyInMinutes: Option[FiniteDuration], gitlabNumberOfBuildPagesToQuery: Option[Int])
+final case class Config(title: String, groups: Seq[ConfigGroup], fetchFrequency: Option[FiniteDuration], gitlabNumberOfBuildPagesToQuery: Option[Int])
