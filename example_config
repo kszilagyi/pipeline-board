@@ -1,4 +1,6 @@
 title: Example projects
+fetchFrequency: 600000000000 # optional
+gitlabNumberOfBuildPagesToQuery: 5 # optional
 groups:
   - groupName: First group
     jenkins:
