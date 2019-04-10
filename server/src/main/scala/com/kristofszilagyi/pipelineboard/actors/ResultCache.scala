@@ -14,6 +14,7 @@ import slick.jdbc.SQLiteProfile
 import slogging.LazyLogging
 
 import scala.collection.immutable.ListMap
+import scala.concurrent.duration.FiniteDuration
 
 sealed trait ResultCacheIncoming
 final case class FetchCached(parent: ActorRef[AllGroups]) extends ResultCacheIncoming
@@ -58,13 +59,13 @@ object ResultCache {
   }
 }
 
-final class ResultCache(db: SQLiteProfile.backend.DatabaseDef ,jobGroups: ListMap[GroupName, Seq[Job]], fetchers: Traversable[Fetcher], buildsInDb: Seq[BuildRow]) extends LazyLogging {
+final class ResultCache(db: SQLiteProfile.backend.DatabaseDef ,jobGroups: ListMap[GroupName, Seq[Job]], fetchFrequency: FiniteDuration, fetchers: Traversable[Fetcher], buildsInDb: Seq[BuildRow]) extends LazyLogging {
   val behaviour: Behavior[ResultCacheIncoming] = {
     Actor.deferred { ctx =>
       fetchers.foreach{ fetcher =>
         val fetcherRef = ctx.spawn(fetcher.behaviour, fetcher.name)
         ctx.watch(fetcherRef)
-        val heartbeatRef = ctx.spawn(new Heartbeat(fetcherRef, ctx.self).behaviour, fetcher.name + "-heart")
+        val heartbeatRef = ctx.spawn(new Heartbeat(fetcherRef, ctx.self, fetchFrequency).behaviour, fetcher.name + "-heart")
         ctx.watch(heartbeatRef)
       }
 
