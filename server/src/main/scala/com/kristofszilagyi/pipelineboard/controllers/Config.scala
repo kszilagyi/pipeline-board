@@ -4,7 +4,7 @@ import com.netaporter.uri.Uri
 import net.jcazevedo.moultingyaml._
 import net.jcazevedo.moultingyaml.DefaultYamlProtocol._
 import JobConfig._
-import com.kristofszilagyi.pipelineboard.utils.YamlUtils.{wrappedYamlString, wrappedYamlNumber}
+import com.kristofszilagyi.pipelineboard.utils.YamlUtils.wrappedYamlString
 import com.netaporter.uri.config.UriConfig
 import com.netaporter.uri.decoding.NoopDecoder
 import com.netaporter.uri.encoding.NoopEncoder
@@ -19,14 +19,14 @@ object JobConfig {
   implicit val urlUserFormat: YamlFormat[UserRoot] = wrappedYamlString(s => UserRoot(RawUrl(Uri.parse(s))))(_.u.rawString)
   implicit val urlRestFormat: YamlFormat[RestRoot] = wrappedYamlString(s => RestRoot(RawUrl(Uri.parse(s))))(_.u.rawString)
   implicit val groupNameFormat: YamlFormat[GroupName] = wrappedYamlString(GroupName.apply)(_.s)
-
-  implicit val finiteDurationFormat: YamlFormat[FiniteDuration] = wrappedYamlNumber(n => FiniteDuration.apply(n.longValue(), MINUTES))(_.toMinutes)
 }
 
 object Minutes {
   implicit val format: YamlFormat[Minutes] = yamlFormat1(Minutes.apply)
 }
-final case class Minutes(minutes: FiniteDuration)
+final case class Minutes(minutes: Int) {
+  def toDuration: FiniteDuration = FiniteDuration(minutes.toLong, MINUTES)
+}
 
 object JenkinsAccessToken {
   implicit val format: YamlFormat[JenkinsAccessToken] = wrappedYamlString(JenkinsAccessToken.apply)(_.s)
