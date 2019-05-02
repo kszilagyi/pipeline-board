@@ -129,14 +129,14 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
                PRIMARY KEY(name, buildNumber)
              )
         """
-    discard(Await.result(db.run(createTable), 1.seconds))
-    val dataInDb = Await.result(db.run(buildsQuery.result), 10.seconds)
+    val databaseTimeout = 10.seconds
+    discard(Await.result(db.run(createTable), databaseTimeout))
+    val dataInDb = Await.result(db.run(buildsQuery.result), databaseTimeout)
     val resultCache = new ResultCache(db, jobsForCache, jobConfig.fetchFrequency.getOrElse(Minutes(1)).toDuration, fetchers, dataInDb)
     new AutowireServer(new AutowireApiImpl(resultCache))
   }
 
   def autowireApi(path: String): Action[AnyContent] = Action.async { implicit request =>
-
     // call Autowire route
     autowireServer.routes(
       autowire.Core.Request(path.split("/"), request.queryString.mapValues(_.mkString))
