@@ -106,12 +106,13 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
 
     def assertUniqueness(): Unit = {
       val jobs = commonJobs(jenkinsJobs, gitLabJobs, teamCityJobs)
-      val jobSet = ListSet(jobs: _*)
-      assert(jobs.size ==== jobSet.size, "Jobs are not unique")
-      assert(jobs.map(_.name).toSet.size ==== jobs.map(_.name).size, "Jobs names are not unique")
+      assert(jobs.size ==== jobs.toSet.size, "Jobs are not unique")
+      val names = jobs.map(_.name)
+      assert(names.size ==== names.toSet.size, "Jobs names are not unique")
     }
     assertUniqueness()
 
+    // basically mapValues, but can't be because surprisingly that doesn't preserve ListMap which we need for ordering
     val jobsForCache = groupedJobs.map { case (name, (jenkins, gitlab, teamCity)) =>
       name -> commonJobs(jenkins, gitlab, teamCity)
     }
