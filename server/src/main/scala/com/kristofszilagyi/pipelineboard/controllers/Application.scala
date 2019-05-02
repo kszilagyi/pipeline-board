@@ -93,6 +93,9 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
       ListMap(bindings: _*)
     }
 
+    def commonJobs(jenkinsJobs: Seq[JenkinsJob], gitlabJobs: Seq[GitLabCiJob], teamCityJobs: Seq[TeamCityJob]): Seq[Job] =
+      jenkinsJobs.map(_.common) ++ gitlabJobs.map(_.common) ++ teamCityJobs.map(_.common)
+
     val jenkinsJobs = groupedJobs.toList.flatMap(_._2._1)
     val gitLabJobs = groupedJobs.toList.flatMap(_._2._2)
     val teamCityJobs = groupedJobs.toList.flatMap(_._2._3)
@@ -102,7 +105,7 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
         teamCityJobs.map(new TeamCityFetcher(wsClient, _))
 
     def assertUniqueness(): Unit = {
-      val jobs = jenkinsJobs.map(_.common) ++ gitLabJobs.map(_.common)
+      val jobs = commonJobs(jenkinsJobs, gitLabJobs, teamCityJobs)
       val jobSet = ListSet(jobs: _*)
       assert(jobs.size ==== jobSet.size, "Jobs are not unique")
       assert(jobs.map(_.name).toSet.size ==== jobs.map(_.name).size, "Jobs names are not unique")
@@ -110,7 +113,7 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
     assertUniqueness()
 
     val jobsForCache = groupedJobs.map { case (name, (jenkins, gitlab, teamCity)) =>
-      name -> (jenkins.map(_.common) ++ gitlab.map(_.common) ++ teamCity.map(_.common))
+      name -> commonJobs(jenkins, gitlab, teamCity)
     }
 
     import slick.jdbc.SQLiteProfile.api._
