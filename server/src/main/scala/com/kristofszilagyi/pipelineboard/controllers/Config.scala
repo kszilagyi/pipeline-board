@@ -21,6 +21,11 @@ object JobConfig {
   implicit val groupNameFormat: YamlFormat[GroupName] = wrappedYamlString(GroupName.apply)(_.s)
 }
 
+trait Secret {
+  // I *wish* I could use getSimpleName, but it can throw with scala classes
+  final override def toString: String = getClass.getName
+}
+
 object Minutes {
   implicit val format: YamlFormat[Minutes] = yamlFormat1(Minutes.apply)
 }
@@ -31,7 +36,7 @@ final case class Minutes(minutes: Int) {
 object JenkinsAccessToken {
   implicit val format: YamlFormat[JenkinsAccessToken] = wrappedYamlString(JenkinsAccessToken.apply)(_.s)
 }
-final case class JenkinsAccessToken(s: String)
+final case class JenkinsAccessToken(s: String) extends Secret
 
 object JenkinsUser {
   implicit val format: YamlFormat[JenkinsUser] = wrappedYamlString(JenkinsUser.apply)(_.s)
@@ -60,7 +65,7 @@ final case class JobNameOnGitLab(s: String)
 object GitLabCiAccessToken {
   implicit val format: YamlFormat[GitLabCiAccessToken] = wrappedYamlString(GitLabCiAccessToken.apply)(_.s)
 }
-final case class GitLabCiAccessToken(s: String)
+final case class GitLabCiAccessToken(s: String) extends Secret
 
 object GitLabCiJobConfig {
   implicit val format: YamlFormat[GitLabCiJobConfig] = yamlFormat4(GitLabCiJobConfig.apply)
