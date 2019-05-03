@@ -17,7 +17,15 @@ before_script:
   - chmod 600 deploy_key
   - ssh-add deploy_key
 
-script: sbt test
+script:
+  - cat /etc/sbt/sbtopts
+  - cat /etc/sbt/jvmopts
+  - env
+  - echo $SBT_OPTS
+  - echo $JVM_OPTS
+  - echo "before running sbt"
+  - sbt test
+  - echo "after running sbt"
 
 env:
   global:
