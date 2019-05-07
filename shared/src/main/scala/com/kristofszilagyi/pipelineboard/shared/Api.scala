@@ -104,6 +104,13 @@ object JobType extends Enum[JobType] with CirceEnum[JobType] {
   override def toString: String = rawString
 }
 
+/*
+ * As an old OO guy at heart, I would probably have made JenkinsJob etc *be* a Job not *have* a job - i.e. inheritance
+ * going against the old mantra in this case.  (And I would also defend it in principle on the grounds of semantics too.)
+ * That would cerainly simplify some of the startup code in Application, but there may be some other consideration which says
+ * not to do that.  For example, Job has a @JsonCodec annotation, which XxxSpecificJobs do not, so perhaps that is a bad idea.
+ */
+
 @JsonCodec final case class Job(name: JobDisplayName, urls: Urls, tpe: JobType) {
   def buildInfo(n: BuildNumber): RawUrl = tpe.buildInfo(urls, n) //todo this is not implemented on git lab ci, refactor
   def jobInfo: RawUrl = tpe.jobInfo(urls)

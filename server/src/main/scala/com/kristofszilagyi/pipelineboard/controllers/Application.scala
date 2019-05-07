@@ -58,54 +58,66 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
 
   @SuppressWarnings(Array(Wart.Throw))
   private val autowireServer = {
-    val groupedJobs = ListMap(jobConfig.groups.map { group =>
-      val jenkinsJobs = group.jenkins.map(_.jobs).getOrElse(Seq.empty).map { jobConfig =>
-        val creds = (jobConfig.user, jobConfig.accessToken) match {
-          case (Some(user), Some(token)) => Some(JenkinsCredentials(user, token))
-          case (None, None) => None
-          case other => throw new AssertionError(s"Either both access token and user has to be defined or neither: $other")
+    val groupedJobs = {
+      val bindings = jobConfig.groups.map { group =>
+        val jenkinsJobs = group.jenkins.map(_.jobs).getOrElse(Seq.empty).map { jobConfig =>
+          val creds = (jobConfig.user, jobConfig.accessToken) match {
+            case (Some(user), Some(token)) => Some(JenkinsCredentials(user, token))
+            case (None, None) => None
+            case other => throw new AssertionError(s"Either both access token and user has to be defined or neither: $other")
+          }
+          JenkinsJob(
+            Job(jobConfig.name, Urls(userRoot = jobConfig.url, restRoot = RestRoot(jobConfig.url.u / "api/json")), Jenkins),
+            creds
+          )
         }
-        JenkinsJob(
-          Job(jobConfig.name, Urls(userRoot = jobConfig.url, restRoot = RestRoot(jobConfig.url.u / "api/json")), Jenkins),
-          creds
-        )
-      }
 
-      val gitLabJobs = group.gitLabCi.map(_.jobs).getOrElse(Seq.empty).map { jobConfig =>
-        GitLabCiJob(
-          Job(jobConfig.name, Urls(jobConfig.url, GitLabUrls.restRoot(jobConfig.url)), GitLabCi),
-          jobConfig.accessToken, jobConfig.jobNameOnGitLab
-        )
-      }
+        val gitLabJobs = group.gitLabCi.map(_.jobs).getOrElse(Seq.empty).map { jobConfig =>
+          GitLabCiJob(
+            Job(jobConfig.name, Urls(jobConfig.url, GitLabUrls.restRoot(jobConfig.url)), GitLabCi),
+            jobConfig.accessToken, jobConfig.jobNameOnGitLab
+          )
+        }
 
-      val teamCityJobs = group.teamCity.map(_.jobs).getOrElse(Seq.empty).map { jobConfig =>
-        val userRoot = jobConfig.url
-        val jobId = userRoot.u.u.query.param("buildTypeId").getOrElse(throw new RuntimeException("Url for TeamCity has to have a buildTypeId parameter"))
-        val restRoot = userRoot.u.u.copy(pathParts = Seq("guestAuth", "app", "rest", "buildTypes", jobId).map(PathPart.apply),
-          query = EmptyQueryString)
-        TeamCityJob(
-          Job(jobConfig.name, Urls(userRoot = userRoot, restRoot = RestRoot(RawUrl(restRoot))), TeamCity)
-        )
+        val teamCityJobs = group.teamCity.map(_.jobs).getOrElse(Seq.empty).map { jobConfig =>
+          val userRoot = jobConfig.url
+          val jobId = userRoot.u.u.query.param("buildTypeId").getOrElse(throw new RuntimeException("Url for TeamCity has to have a buildTypeId parameter"))
+          val restRoot = userRoot.u.u.copy(pathParts = Seq("guestAuth", "app", "rest", "buildTypes", jobId).map(PathPart.apply),
+            query = EmptyQueryString)
+          TeamCityJob(
+            Job(jobConfig.name, Urls(userRoot = userRoot, restRoot = RestRoot(RawUrl(restRoot))), TeamCity)
+          )
+        }
+        (group.groupName, (jenkinsJobs, gitLabJobs, teamCityJobs))
       }
-      (group.groupName, (jenkinsJobs, gitLabJobs, teamCityJobs))
-    }: _*)
+      ListMap(bindings: _*)
+    }
+
+    def commonJobs(jenkinsJobs: Seq[JenkinsJob], gitlabJobs: Seq[GitLabCiJob], teamCityJobs: Seq[TeamCityJob]): Seq[Job] =
+      jenkinsJobs.map(_.common) ++ gitlabJobs.map(_.common) ++ teamCityJobs.map(_.common)
 
     val jenkinsJobs = groupedJobs.toList.flatMap(_._2._1)
     val gitLabJobs = groupedJobs.toList.flatMap(_._2._2)
     val teamCityJobs = groupedJobs.toList.flatMap(_._2._3)
     val fetchers =
-      jenkinsJobs.map(new JenkinsFetcher(wsClient, _)) ++ gitLabJobs.map(new GitLabCiFetcher(wsClient, _, jobConfig.gitlabNumberOfBuildPagesToQuery.getOrElse(10))) ++
+      jenkinsJobs.map(new JenkinsFetcher(wsClient, _)) ++
+        gitLabJobs.map(new GitLabCiFetcher(wsClient, _, jobConfig.gitlabNumberOfBuildPagesToQuery.getOrElse(10))) ++
         teamCityJobs.map(new TeamCityFetcher(wsClient, _))
 
-    val jobs = jenkinsJobs.map(_.common) ++ gitLabJobs.map(_.common)
-    val jobSet = ListSet(jobs: _*)
-    assert(jobs.size ==== jobSet.size, "Jobs are not unique")
-    assert(jobs.map(_.name).toSet.size ==== jobs.map(_.name).size, "Jobs names are not unique")
-    val jobsForCache = groupedJobs.map{case (name, (jenkins, gitlab, teamCity)) =>
-        name -> (jenkins.map(_.common) ++ gitlab.map(_.common) ++ teamCity.map(_.common))
+    def assertUniqueness(): Unit = {
+      val jobs = commonJobs(jenkinsJobs, gitLabJobs, teamCityJobs)
+      assert(jobs.size ==== jobs.toSet.size, "Jobs are not unique")
+      val names = jobs.map(_.name)
+      assert(names.size ==== names.toSet.size, "Jobs names are not unique")
     }
-    import slick.jdbc.SQLiteProfile.api._
+    assertUniqueness()
 
+    // basically mapValues, but can't be because surprisingly that doesn't preserve ListMap which we need for ordering
+    val jobsForCache = groupedJobs.map { case (name, (jenkins, gitlab, teamCity)) =>
+      name -> commonJobs(jenkins, gitlab, teamCity)
+    }
+
+    import slick.jdbc.SQLiteProfile.api._
     val db = Database.forURL("jdbc:sqlite:./db.sqlite")
     val createTable =
       sqlu"""CREATE TABLE IF NOT EXISTS builds(
@@ -117,14 +129,14 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
                PRIMARY KEY(name, buildNumber)
              )
         """
-    discard(Await.result(db.run(createTable), 1.seconds))
-    val dataInDb = Await.result(db.run(buildsQuery.result), 10.seconds)
+    val databaseTimeout = 10.seconds
+    discard(Await.result(db.run(createTable), databaseTimeout))
+    val dataInDb = Await.result(db.run(buildsQuery.result), databaseTimeout)
     val resultCache = new ResultCache(db, jobsForCache, jobConfig.fetchFrequency.getOrElse(Minutes(1)).toDuration, fetchers, dataInDb)
     new AutowireServer(new AutowireApiImpl(resultCache))
   }
 
   def autowireApi(path: String): Action[AnyContent] = Action.async { implicit request =>
-
     // call Autowire route
     autowireServer.routes(
       autowire.Core.Request(path.split("/"), request.queryString.mapValues(_.mkString))
