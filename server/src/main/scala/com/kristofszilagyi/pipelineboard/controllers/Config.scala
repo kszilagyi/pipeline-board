@@ -22,7 +22,15 @@ object JobConfig {
 }
 
 trait Secret {
-  // I *wish* I could use getSimpleName, but it can throw with scala classes
+  /*
+   * I *wish* I could use getSimpleName, but it can throw with scala types, for example anything which
+   * 1: is, or 2: is inside, a scala object:
+   *   object Foo { class Bar }
+   *   Foo.getClass.getSimpleName            //  1: throws java.lang.InternalError: Malformed class name
+   *   Foo.getName                           // ok: "Foo$"
+   *   (new Foo.Bar).getClass.getSimpleName  //  2: throws java.lang.InternalError: Malformed class name
+   *   (new Foo.Bar).getClass.getName        // ok: "Foo$Bar"
+   */
   final override def toString: String = getClass.getName
 }
 

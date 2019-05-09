@@ -4,7 +4,7 @@ import java.io.File
 import javax.inject._
 
 import com.kristofszilagyi.pipelineboard.actors.ResultCache
-import com.kristofszilagyi.pipelineboard.db.BuildsDb.buildsQuery
+import com.kristofszilagyi.pipelineboard.db.BuildsDb
 import com.kristofszilagyi.pipelineboard.fetchers._
 import com.kristofszilagyi.pipelineboard.shared.CssSettings.settings._
 import com.kristofszilagyi.pipelineboard.shared.JobType.{GitLabCi, Jenkins, TeamCity}
@@ -19,7 +19,7 @@ import play.api.libs.ws.WSClient
 import play.api.mvc._
 import slogging.{LazyLogging, LoggerConfig, PrintLoggerFactory}
 
-import scala.collection.immutable.{ListMap, ListSet}
+import scala.collection.immutable.ListMap
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, ExecutionContext}
 import scala.io.Source
@@ -28,7 +28,7 @@ object Application {
   val utf8 = "utf-8"
 }
 
-class Application @Inject() (wsClient: WSClient)(val config: Configuration)
+final class Application @Inject() (wsClient: WSClient)(val config: Configuration)
                                              (implicit ec: ExecutionContext) extends InjectedController with LazyLogging{
 
   LoggerConfig.factory = PrintLoggerFactory()
@@ -46,14 +46,6 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
     val config = Config.format.read(Source.fromFile(configPath).mkString.parseYaml)
     logger.info(s"Config is: $config")
     config
-  }
-
-  def root: Action[AnyContent] = Action {
-    Ok(views.html.index(jobConfig.title)(config))
-  }
-
-  def css: Action[AnyContent] = Action {
-    Ok(MyStyles.render).as(CSS)
   }
 
   @SuppressWarnings(Array(Wart.Throw))
@@ -130,19 +122,28 @@ class Application @Inject() (wsClient: WSClient)(val config: Configuration)
              )
         """
     val databaseTimeout = 10.seconds
+    logger.info("Making sure database table exists")
     discard(Await.result(db.run(createTable), databaseTimeout))
-    val dataInDb = Await.result(db.run(buildsQuery.result), databaseTimeout)
+    logger.info("Querying database table")
+    val dataInDb = Await.result(db.run(BuildsDb.buildsQuery.result), databaseTimeout)
+    logger.info("Finished startup database calls")
     val resultCache = new ResultCache(db, jobsForCache, jobConfig.fetchFrequency.getOrElse(Minutes(1)).toDuration, fetchers, dataInDb)
     new AutowireServer(new AutowireApiImpl(resultCache))
+  }
+
+  def root: Action[AnyContent] = Action {
+    Ok(views.html.index(jobConfig.title)(config))
+  }
+
+  def css: Action[AnyContent] = Action {
+    Ok(MyStyles.render).as(CSS)
   }
 
   def autowireApi(path: String): Action[AnyContent] = Action.async { implicit request =>
     // call Autowire route
     autowireServer.routes(
       autowire.Core.Request(path.split("/"), request.queryString.mapValues(_.mkString))
-    ).map(s => {
-      Ok(s)
-    })
+    ).map(Ok(_))
   }
 
 }
